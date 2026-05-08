@@ -1291,13 +1291,13 @@ async function postToSheets(action, data) {
     save(); return true;
   }
   try {
-    const body = action === 'delete' ? { action, target:'projects', id: data } : { action, target:'projects', data };
+    const body = action === 'delete' ? { action, target:'projects', data } : { action, target:'projects', data };
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify(body)
     });
     const json = await res.json();
-    return json.status === 'ok';
+    return json.success === true || json.status === 'ok';
   } catch(err) {
     console.warn('Sheets POST gagal:', err);
     return false;
@@ -1383,6 +1383,15 @@ function toast(msg) {
 // ════════════════════════════════
 function save() { localStorage.setItem('akar_projects', JSON.stringify(projects)); }
 
+
+function formatDateID(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
 function formatRp(n) {
   if(!n||isNaN(n)) return 'Rp 0';
   return 'Rp ' + parseInt(n).toLocaleString('id-ID');
@@ -1418,6 +1427,7 @@ function addProject() {
   const communityHiddenEl = document.getElementById('f-community');
   const community = (communitySearchEl ? communitySearchEl.value.split(' · ')[0].trim() : '');
   if(!community) { toast('Komunitas wajib diisi.'); return; }
+  // Brand opsional - boleh kosong saat Brief & Match
 
   const komID    = document.getElementById('f-community').value || '';
   const selCom   = communityList.find(c => c['ID'] === komID) || {};
@@ -1453,23 +1463,148 @@ const NEXT = { brief:'plant', plant:'activate', activate:'amplify', amplify:null
 const NEXT_LABEL = { brief:'Plant', plant:'Activate', activate:'Amplify' };
 const DOT_COLOR = { brief:'var(--amber)', plant:'#61a363', activate:'#4e86b7', amplify:'#a371c0' };
 
-function moveProject(id, status) {
-  const p = projects.find(x=>x.id===id);
+function moveProject(prjId, status) {
+  const p = projects.find(x => String(x.prj_id||x.id) === String(prjId));
   if(p){
     p.status = status;
     save();
-    postToSheets('update', { id: p.id, status });
+    postToSheets('update', { PRJ_ID: p.prj_id || p.id, Status: status });
     renderAll();
     toast('Status diperbarui ✓');
+    setTimeout(() => loadFromSheets().then(renderAll), 1000);
   }
 }
 
-function deleteProject(id) {
+function deleteProject(prjId) {
   if(!confirm('Hapus aktivasi ini?')) return;
-  projects = projects.filter(x=>x.id!==id);
+  projects = projects.filter(x => String(x.prj_id||x.id) !== String(prjId));
   save();
-  postToSheets('delete', id);
+  postToSheets('delete', { PRJ_ID: prjId });
   renderAll(); toast('Dihapus.');
+}
+
+// ════════════════════════════════
+// PROJECT DETAIL & EDIT MODAL
+// ════════════════════════════════
+let editingProject = null;
+
+function openProjectDetail(prjId) {
+  const p = projects.find(x => String(x.prj_id||x.id) === String(prjId));
+  if (!p) return;
+  editingProject = { ...p };
+  const modal = document.getElementById('projDetailModal');
+  if (!modal) return;
+  
+  // Build community options for edit
+  const comOptions = communityList.map(c => 
+    `<option value="${c['ID']}" ${c['ID']===p.kom_id?'selected':''}>${c['Nama Komunitas']} · ${c['Kota']||''}</option>`
+  ).join('');
+  
+  document.getElementById('pdmBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="grid-column:1/-1;">
+        <label style="font-size:10px;letter-spacing:1.5px;color:#6b7280;text-transform:uppercase;font-weight:600;">PRJ_ID</label>
+        <div style="font-family:'DM Mono',monospace;font-size:13px;color:#E8B04B;margin-top:4px;">${p.prj_id || '—'}</div>
+      </div>
+      <div>
+        <label class="pdm-label">Brand</label>
+        <input class="pdm-input" id="pdm-brand" value="${(p.brand||'').replace(/"/g,'&quot;')}" placeholder="(opsional)">
+      </div>
+      <div>
+        <label class="pdm-label">Komunitas</label>
+        <select class="pdm-input" id="pdm-kom">
+          <option value="">— pilih —</option>
+          ${comOptions}
+        </select>
+      </div>
+      <div>
+        <label class="pdm-label">Kota</label>
+        <input class="pdm-input" id="pdm-city" value="${(p.city||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div>
+        <label class="pdm-label">Pillar</label>
+        <select class="pdm-input" id="pdm-pillar">
+          ${['Sports','Lifestyle','Family','Gen-Z'].map(o=>`<option value="${o}" ${p.pillar===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="pdm-label">Tanggal</label>
+        <input type="date" class="pdm-input" id="pdm-date" value="${(p.date||'').substring(0,10)}">
+      </div>
+      <div>
+        <label class="pdm-label">Status / Stage</label>
+        <select class="pdm-input" id="pdm-status">
+          ${['brief','plant','activate','amplify'].map(s=>{
+            const labels = {brief:'Brief & Match',plant:'Plant',activate:'Activate',amplify:'Amplify'};
+            return `<option value="${s}" ${p.status===s?'selected':''}>${labels[s]}</option>`;
+          }).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="pdm-label">Total Budget (Rp)</label>
+        <input type="number" class="pdm-input" id="pdm-total" value="${p.total_budget||0}">
+      </div>
+      <div>
+        <label class="pdm-label">Hospitality Budget (Rp)</label>
+        <input type="number" class="pdm-input" id="pdm-hosp" value="${p.budget||0}">
+      </div>
+      <div>
+        <label class="pdm-label">PIC Komunitas</label>
+        <input class="pdm-input" id="pdm-pic" value="${(p.pic||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div>
+        <label class="pdm-label">Videografer</label>
+        <input class="pdm-input" id="pdm-videog" value="${(p.videog||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div style="grid-column:1/-1;background:rgba(232,176,75,0.05);border:1px solid rgba(232,176,75,0.15);border-radius:8px;padding:12px 14px;font-size:11px;color:#97BC62;font-style:italic;">
+        Total Budget = anggaran keseluruhan project. Hospitality = bagian dari total yang dialokasikan untuk komunitas (drinks, snacks, dll).
+      </div>
+    </div>
+  `;
+  
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProjectDetail() {
+  document.getElementById('projDetailModal').style.display = 'none';
+  document.body.style.overflow = '';
+  editingProject = null;
+}
+
+async function saveProjectEdit() {
+  if (!editingProject) return;
+  const btn = document.getElementById('pdmSaveBtn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  
+  const komID = document.getElementById('pdm-kom').value;
+  const selCom = communityList.find(c => c['ID'] === komID) || {};
+  
+  const payload = {
+    PRJ_ID: editingProject.prj_id || editingProject.id,
+    Brand: document.getElementById('pdm-brand').value.trim(),
+    KOM_ID: komID,
+    Community_Name_Cache: selCom['Nama Komunitas'] || editingProject.community,
+    City: document.getElementById('pdm-city').value.trim(),
+    Pillar: document.getElementById('pdm-pillar').value,
+    Date: document.getElementById('pdm-date').value,
+    Total_Budget: parseInt(document.getElementById('pdm-total').value) || 0,
+    Hospitality_Budget: parseInt(document.getElementById('pdm-hosp').value) || 0,
+    PIC: document.getElementById('pdm-pic').value.trim(),
+    Videog: document.getElementById('pdm-videog').value.trim(),
+    Status: document.getElementById('pdm-status').value,
+  };
+  
+  const ok = await postToSheets('update', payload);
+  btn.disabled = false; btn.textContent = 'Simpan Perubahan';
+  if (ok) {
+    toast('Project diupdate ✓');
+    closeProjectDetail();
+    await loadFromSheets();
+    renderAll();
+  } else {
+    toast('Gagal update — coba lagi');
+  }
 }
 
 // ════════════════════════════════
@@ -1490,17 +1625,18 @@ function renderOps() {
 
     el.innerHTML = items.map(p => {
       const next = NEXT[p.status];
+      const safePid = String(p.prj_id || p.id).replace(/'/g, '');
       return `
-        <div class="ops-card">
-          <div class="ocard-brand">${p.brand}</div>
-          <div class="ocard-community">${p.community}</div>
+        <div class="ops-card" style="cursor:pointer;" onclick="openProjectDetail('${safePid}')">
+          <div class="ocard-brand">${p.brand || '<span style=\'opacity:0.4;font-style:italic\'>(belum ada brand)</span>'}</div>
+          <div class="ocard-community">${p.community || '—'}</div>
           <div class="ocard-meta">
             ${p.city||''} ${p.pillar ? '· '+p.pillar : ''}<br>
-            ${p.date ? '📅 '+p.date : ''}${p.budget ? ' · 💰 '+formatRp(p.budget) : ''}
+            ${p.date ? '📅 '+formatDateID(p.date) : ''}${p.total_budget ? ' · 💰 '+formatRp(p.total_budget) : ''}
           </div>
-          <div class="ocard-actions">
-            ${next ? `<button class="ocard-btn ocard-btn-next" onclick="moveProject(${p.id},'${next}')">→ ${NEXT_LABEL[p.status]}</button>` : '<span style="font-family:DM Mono,monospace;font-size:7px;color:var(--gray);padding:3px 0">✓ Selesai</span>'}
-            <button class="ocard-btn ocard-btn-del" onclick="deleteProject(${p.id})">Hapus</button>
+          <div class="ocard-actions" onclick="event.stopPropagation()">
+            ${next ? `<button class="ocard-btn ocard-btn-next" onclick="moveProject('${safePid}','${next}')">→ ${NEXT_LABEL[p.status]}</button>` : '<span style="font-family:DM Mono,monospace;font-size:7px;color:var(--gray);padding:3px 0">✓ Selesai</span>'}
+            <button class="ocard-btn ocard-btn-del" onclick="deleteProject('${safePid}')">Hapus</button>
           </div>
         </div>`;
     }).join('');
@@ -1511,7 +1647,7 @@ function renderOps() {
   document.getElementById('os-brief').textContent = projects.filter(p=>p.status==='brief').length;
   document.getElementById('os-active').textContent = projects.filter(p=>['plant','activate'].includes(p.status)).length;
   document.getElementById('os-done').textContent = projects.filter(p=>p.status==='amplify').length;
-  document.getElementById('os-budget').textContent = formatRp(projects.reduce((s,p)=>s+(p.budget||0),0));
+  document.getElementById('os-budget').textContent = formatRp(projects.reduce((s,p)=>s+(p.total_budget||0),0));
 }
 
 // ════════════════════════════════
