@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKAR — Project Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #2C5F2D;
+  --green-light: #3d7a3e;
+  --green-pale: #eaf2ea;
+  --amber: #E8B04B;
+  --amber-dim: #c49535;
+  --dark: #1A3A1B;
+  --darker: #0f2310;
+  --cream: #F5F1E8;
+  --cream-dim: #EDE8DC;
+  --gray: #6B7C6D;
+  --gray-light: #9aaa9c;
+  --border: rgba(245,241,232,0.08);
+  --border-md: rgba(245,241,232,0.14);
+  --border-light: rgba(44,95,45,0.15);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--darker);
+  color: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.5s ease;
+}
+
+body.pitch-mode { background: var(--darker); }
+body.ops-mode { background: #111d12; }
+
+/* ══ NOISE OVERLAY ══ */
+.noise {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ══ MODE SWITCHER ══ */
+.mode-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36px;
+  background: rgba(15,35,16,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.mode-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mode-logo svg { width: 24px; height: 24px; }
+.mode-logo-text {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 5px;
+  color: var(--cream);
+}
+.mode-logo-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--gray);
+  margin-left: 4px;
+  margin-top: 2px;
+}
+
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-md);
+  border-radius: 3px;
+  padding: 3px;
+}
+.mode-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--gray);
+  transition: all 0.25s;
+}
+.mode-btn.active {
+  background: var(--green);
+  color: var(--cream);
+}
+.mode-btn.pitch-active {
+  background: var(--amber);
+  color: var(--dark);
+}
+
+.mode-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+.live-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--gray);
+  text-transform: uppercase;
+}
+.clock-display {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 1px;
+}
+
+/* ══ MAIN WRAPPER ══ */
+.wrapper {
+  position: relative;
+  z-index: 1;
+  padding-top: 52px;
+}
+
+/* ══════════════════════════════════
+   PITCH MODE
+══════════════════════════════════ */
+.pitch-view { display: block; }
+.ops-view { display: none; }
+
+body.ops-mode .pitch-view { display: none; }
+body.ops-mode .ops-view { display: block; }
+
+/* ── PITCH HERO ── */
+.pitch-hero {
+  padding: 72px 64px 56px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(15,35,16,0.95) 0%, rgba(26,58,27,0.6) 100%);
+}
+
+.pitch-hero::before {
+  content: '';
+  position: absolute;
+  top: -120px; right: -120px;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(44,95,45,0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.pitch-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: 30%;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,176,75,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.pitch-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pitch-eyebrow::before {
+  content: '';
+  width: 32px; height: 1px;
+  background: var(--amber);
+}
+
+.pitch-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(48px, 6vw, 88px);
+  font-weight: 300;
+  line-height: 0.95;
+  color: var(--cream);
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+}
+
+.pitch-headline em {
+  font-style: italic;
+  color: var(--amber);
+}
+
+.pitch-tagline {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--gray);
+  margin-top: 16px;
+  font-weight: 300;
+}
+
+/* ── PITCH STATS ── */
+.pitch-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 700px) {
+  .pitch-stats { grid-template-columns: repeat(2, 1fr); }
+  .pitch-stat { border-right: none !important; border-bottom: 1px solid var(--border); }
+  .pitch-stat:nth-child(odd) { border-right: 1px solid var(--border) !important; }
+  .pitch-stat-num { font-size: 48px; }
+  .pitch-stat-label { font-size: 8px; letter-spacing: 1.5px; }
+  .pitch-hero { padding: 40px 24px 36px; }
+  .pitch-headline { font-size: 42px; }
+  .pitch-section { padding: 36px 24px; }
+  .pitch-section-hdr { flex-wrap: wrap; }
+  .pitch-section-line { display: none; }
+  .pitch-projects-grid { grid-template-columns: 1fr; }
+  .pitch-pillars { grid-template-columns: repeat(2, 1fr); }
+  .pitch-footer { padding: 28px 24px; flex-direction: column; gap: 16px; text-align: center; }
+  .mode-bar { padding: 0 16px; }
+  .mode-logo-sub { display: none; }
+  .mode-logo-text { font-size: 16px; }
+  .live-label { display: none; }
+}
+
+.pitch-stat {
+  padding: 32px 40px;
+  border-right: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+
+.pitch-stat:last-child { border-right: none; }
+.pitch-stat:hover { background: rgba(255,255,255,0.02); }
+
+.pitch-stat-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 64px;
+  line-height: 1;
+  color: var(--amber);
+  display: block;
+}
+
+.pitch-stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-top: 6px;
+  display: block;
+}
+
+.pitch-stat-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(245,241,232,0.3);
+  margin-top: 4px;
+}
+
+/* ── PITCH PROJECTS ── */
+.pitch-section {
+  padding: 56px 64px;
+}
+
+.pitch-section-hdr {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.pitch-section-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  opacity: 0.6;
+}
+
+.pitch-section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--cream);
+  letter-spacing: -0.5px;
+}
+
+.pitch-section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin-left: 16px;
+}
+
+/* Project cards — pitch mode */
+.pitch-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.pitch-project-card {
+  background: var(--darker);
+  padding: 28px 28px 24px;
+  transition: background 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.pitch-project-card:hover { background: rgba(44,95,45,0.08); }
+
+.pitch-project-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--border-md);
+  transition: background 0.25s;
+}
+
+.pitch-project-card[data-phase="brief"]::before { background: var(--amber); }
+.pitch-project-card[data-phase="plant"]::before { background: #61a363; }
+.pitch-project-card[data-phase="activate"]::before { background: #4e86b7; }
+.pitch-project-card[data-phase="amplify"]::before { background: #a371c0; }
+
+.ppc-phase {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.ppc-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 3px;
+  color: var(--cream);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.ppc-community {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--gray);
+  margin-bottom: 14px;
+}
+
+.ppc-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ppc-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  border: 1px solid var(--border-md);
+  color: var(--gray);
+}
+
+/* ── PITCH COMMUNITY SHOWCASE ── */
+.pitch-pillars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.pitch-pillar {
+  background: var(--darker);
+  padding: 32px 28px;
+  transition: background 0.25s;
+}
+
+.pitch-pillar:hover { background: rgba(44,95,45,0.06); }
+
+.pp-icon {
+  font-size: 28px;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.pp-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: var(--cream);
+  margin-bottom: 6px;
+}
+
+.pp-count {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--amber);
+  margin-bottom: 12px;
+}
+
+.pp-items {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--gray);
+  letter-spacing: 0.5px;
+  line-height: 2;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ══════════════════════════════════
+   OPS MODE
+══════════════════════════════════ */
+.ops-view {
+  padding: 28px 36px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.ops-hdr {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.ops-hdr-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+}
+.ops-hdr-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--cream);
+}
+.ops-hdr-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--gray);
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+
+/* Stats */
+.ops-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.ops-stat {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  border-radius: 2px;
+}
+.ostat-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ostat-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  color: var(--amber);
+  line-height: 1;
+}
+.ostat-unit {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--gray);
+  margin-top: 3px;
+}
+
+/* Pipeline board */
+.ops-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.ops-col {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ops-col-hdr {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ops-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+.ops-col-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--gray);
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.ops-col-cnt {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gray);
+}
+
+.ops-cards {
+  padding: 8px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.ops-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 11px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ops-card:hover { border-color: var(--amber); background: rgba(232,176,75,0.05); }
+
+.ocard-brand {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.ocard-community {
+  font-size: 12px;
+  color: var(--cream);
+  font-weight: 500;
+  margin-bottom: 5px;
+  line-height: 1.3;
+}
+
+.ocard-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--gray);
+  letter-spacing: 0.5px;
+  line-height: 1.7;
+}
+
+.ocard-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.ocard-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  padding: 3px 7px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+
+.ocard-btn-next { background: var(--amber); border-color: var(--amber); color: var(--dark); }
+.ocard-btn-next:hover { background: var(--amber-dim); }
+.ocard-btn-del { background: transparent; border-color: var(--border-md); color: var(--gray); }
+.ocard-btn-del:hover { border-color: #c0392b; color: #c0392b; }
+
+/* Add form */
+.ops-add {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(245,241,232,0.15);
+  border-radius: 2px;
+  padding: 20px;
+}
+
+.ops-add-toggle {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+}
+.ops-add-toggle:hover { opacity: 0.7; }
+
+.ops-add-form { display: none; margin-top: 18px; }
+.ops-add-form.open { display: block; }
+
+.f-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+.f-group { display: flex; flex-direction: column; gap: 5px; }
+.f-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: var(--gray);
+  text-transform: uppercase;
+}
+.f-input, .f-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(245,241,232,0.12);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 8px 11px;
+  border-radius: 2px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.f-input:focus, .f-select:focus { border-color: var(--amber); }
+.f-select option { background: #0f2310; }
+
+.f-sec {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  opacity: 0.7;
+}
+
+.f-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+.f-btn-primary {
+  background: var(--amber);
+  color: var(--dark);
+  border: none;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 9px 18px;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.f-btn-primary:hover { background: var(--amber-dim); }
+
+.f-btn-ghost {
+  background: transparent;
+  color: var(--gray);
+  border: 1px solid var(--border-md);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 9px 18px;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.f-btn-ghost:hover { color: var(--cream); }
+
+.ops-sep { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* empty */
+.empty-col {
+  text-align: center;
+  padding: 24px 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: rgba(245,241,232,0.15);
+  letter-spacing: 1px;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: var(--green);
+  color: var(--cream);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 11px 18px;
+  border-radius: 2px;
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.25s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pitch-hero { animation: fadeUp 0.6s ease; }
+.pitch-stats { animation: fadeUp 0.6s ease 0.1s both; }
+.pitch-section { animation: fadeUp 0.6s ease 0.2s both; }
+
+.pitch-stat-num {
+  animation: countUp 0.8s ease 0.3s both;
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ══ PASSWORD MODAL ══ */
+.pw-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(10,22,11,0.92);
+  backdrop-filter: blur(16px);
+  align-items: center;
+  justify-content: center;
+}
+.pw-modal-box {
+  background: #111d12;
+  border: 1px solid var(--border-md);
+  border-radius: 4px;
+  padding: 36px 32px;
+  width: 320px;
+  max-width: 90vw;
+  text-align: center;
+}
+.pw-modal-icon {
+  font-size: 28px;
+  margin-bottom: 14px;
+}
+.pw-modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--cream);
+  margin-bottom: 4px;
+}
+.pw-modal-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--gray);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+.pw-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-md);
+  color: var(--cream);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 12px 16px;
+  border-radius: 3px;
+  outline: none;
+  text-align: center;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+}
+.pw-input:focus { border-color: var(--amber); }
+.pw-error {
+  display: none;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #c0392b;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.pw-actions { display: flex; gap: 8px; margin-top: 8px; }
+.pw-submit {
+  flex: 1;
+  background: var(--amber);
+  color: var(--dark);
+  border: none;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.pw-submit:hover { background: var(--amber-dim); }
+.pw-cancel {
+  background: transparent;
+  color: var(--gray);
+  border: 1px solid var(--border-md);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 10px 14px;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+</style>
+</head>
+<body class="pitch-mode">
+<div class="noise"></div>
+
+<!-- MODE BAR -->
+<div class="mode-bar">
+  <div class="mode-logo">
+    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="30" cy="30" r="28" fill="none" stroke="#E8B04B" stroke-width="1.5" opacity="0.4"/>
+      <circle cx="30" cy="30" r="14" fill="#E8B04B"/>
+      <g stroke="#F5F1E8" stroke-width="2" stroke-linecap="round" fill="none">
+        <path d="M30 30 L30 12"/><path d="M30 30 L44 21"/>
+        <path d="M30 30 L46 35"/><path d="M30 30 L36 50"/>
+        <path d="M30 30 L18 48"/><path d="M30 30 L14 28"/>
+      </g>
+      <g fill="#F5F1E8">
+        <circle cx="30" cy="12" r="2"/><circle cx="44" cy="21" r="2"/>
+        <circle cx="46" cy="35" r="2"/><circle cx="36" cy="50" r="2"/>
+        <circle cx="18" cy="48" r="2"/><circle cx="14" cy="28" r="2"/>
+      </g>
+    </svg>
+    <span class="mode-logo-text">AKAR</span>
+    <span class="mode-logo-sub">Project Tracker</span>
+  </div>
+
+  <div class="mode-toggle">
+    <button class="mode-btn pitch-active" id="btn-pitch" onclick="setMode('pitch')">Pitch View</button>
+    <button class="mode-btn" id="btn-ops" onclick="setMode('ops')">Ops View</button>
+  </div>
+
+  <div class="mode-right">
+    <div class="live-dot" id="live-dot"></div>
+    <span class="live-label" id="live-label">Menghubungkan...</span>
+    <span class="clock-display" id="clock">--:--</span>
+  </div>
+</div>
+
+<div class="wrapper">
+
+<!-- ══════════════════════════════════
+     PITCH VIEW
+══════════════════════════════════ -->
+<div class="pitch-view">
+
+  <!-- HERO -->
+  <div class="pitch-hero">
+    <div class="pitch-eyebrow">Live Project Feed</div>
+    <div class="pitch-headline">
+      Brands we're<br>
+      <em>activating.</em>
+    </div>
+    <div class="pitch-tagline">Real communities. Real moments. Ongoing proof.</div>
+  </div>
+
+  <!-- STATS -->
+  <div class="pitch-stats">
+    <div class="pitch-stat">
+      <span class="pitch-stat-num" id="ps-activations">0</span>
+      <span class="pitch-stat-label">Aktivasi Berjalan</span>
+      <div class="pitch-stat-sub">project aktif saat ini</div>
+    </div>
+    <div class="pitch-stat">
+      <span class="pitch-stat-num" id="ps-brands">0</span>
+      <span class="pitch-stat-label">Brand Dikerjakan</span>
+      <div class="pitch-stat-sub">sejak Akar berdiri</div>
+    </div>
+    <div class="pitch-stat">
+      <span class="pitch-stat-num" id="ps-communities">0</span>
+      <span class="pitch-stat-label">Project Komunitas</span>
+      <div class="pitch-stat-sub">dari database Akar</div>
+    </div>
+    <div class="pitch-stat">
+      <span class="pitch-stat-num" id="ps-amplified">0</span>
+      <span class="pitch-stat-label">Aktivasi Selesai</span>
+      <div class="pitch-stat-sub">sudah dipublish & dilaporkan</div>
+    </div>
+  </div>
+
+  <!-- ONGOING PROJECTS -->
+  <div class="pitch-section">
+    <div class="pitch-section-hdr">
+      <span class="pitch-section-num">01</span>
+      <span class="pitch-section-title">Ongoing Projects</span>
+      <div class="pitch-section-line"></div>
+    </div>
+
+    <div class="pitch-projects-grid" id="pitch-projects-grid">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <!-- COMMUNITY PILLARS -->
+  <div class="pitch-section" style="padding-top:0">
+    <div class="pitch-section-hdr">
+      <span class="pitch-section-num">02</span>
+      <span class="pitch-section-title">Community Network</span>
+      <div class="pitch-section-line"></div>
+    </div>
+
+    <div class="pitch-pillars">
+      <div class="pitch-pillar">
+        <span class="pp-icon">⚽</span>
+        <div class="pp-name">Sports</div>
+        <div class="pp-count" id="pil-sports-count">— komunitas</div>
+        <div class="pp-items">Futsal · Basket · Lari<br>Padel · Tenis · Gym<br>Cycling · Badminton</div>
+      </div>
+      <div class="pitch-pillar">
+        <span class="pp-icon">🏍</span>
+        <div class="pp-name">Lifestyle</div>
+        <div class="pp-count" id="pil-lifestyle-count">— komunitas</div>
+        <div class="pp-items">Vespa · Motor · Fotografi<br>Otomotif · Kopi<br>Kuliner · Cycling</div>
+      </div>
+      <div class="pitch-pillar">
+        <span class="pp-icon">🏠</span>
+        <div class="pp-name">Family</div>
+        <div class="pp-count" id="pil-family-count">— komunitas</div>
+        <div class="pp-items">Zumba · Arisan · PKK<br>Parenting · Warkop<br>Komunitas RT</div>
+      </div>
+      <div class="pitch-pillar">
+        <span class="pp-icon">🎮</span>
+        <div class="pp-name">Gen-Z</div>
+        <div class="pp-count" id="pil-genz-count">— komunitas</div>
+        <div class="pp-items">E-sport · Kpop · Cosplay<br>Anime · TikTok<br>Skateboard · Hiking</div>
+      </div>
+    </div>
+</div>
+
+  <!-- FOOTER -->
+  
+  </div>
+
+</div><!-- /pitch-view -->
+
+
+<!-- ══════════════════════════════════
+     OPS VIEW
+══════════════════════════════════ -->
+<div class="ops-view">
+
+  <div class="ops-hdr">
+    <span class="ops-hdr-num">OPS</span>
+    <span class="ops-hdr-title">Project Tracker</span>
+    <span class="ops-hdr-sub" id="ops-date">—</span>
+  </div>
+
+  <!-- STATS -->
+  <div class="ops-stats">
+    <div class="ops-stat">
+      <div class="ostat-lbl">Total Aktivasi</div>
+      <div class="ostat-val" id="os-total">0</div>
+      <div class="ostat-unit">semua fase</div>
+    </div>
+    <div class="ops-stat">
+      <div class="ostat-lbl">Brief & Match</div>
+      <div class="ostat-val" id="os-brief" style="color:var(--amber)">0</div>
+      <div class="ostat-unit">di atas kertas</div>
+    </div>
+    <div class="ops-stat">
+      <div class="ostat-lbl">Plant + Activate</div>
+      <div class="ostat-val" id="os-active" style="color:#61a363">0</div>
+      <div class="ostat-unit">sedang jalan</div>
+    </div>
+    <div class="ops-stat">
+      <div class="ostat-lbl">Selesai</div>
+      <div class="ostat-val" id="os-done" style="color:#a371c0">0</div>
+      <div class="ostat-unit">amplify done</div>
+    </div>
+    <div class="ops-stat">
+      <div class="ostat-lbl">Total Budget</div>
+      <div class="ostat-val" id="os-budget" style="font-size:18px; padding-top:6px">Rp 0</div>
+      <div class="ostat-unit">hospitality alokasi</div>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="ops-pipeline">
+    <div class="ops-col">
+      <div class="ops-col-hdr">
+        <div class="ops-dot" style="background:var(--amber)"></div>
+        <span class="ops-col-lbl">Brief & Match</span>
+        <span class="ops-col-cnt" id="oc-brief">0</span>
+      </div>
+      <div class="ops-cards" id="ops-col-brief"></div>
+    </div>
+    <div class="ops-col">
+      <div class="ops-col-hdr">
+        <div class="ops-dot" style="background:#61a363"></div>
+        <span class="ops-col-lbl">Plant</span>
+        <span class="ops-col-cnt" id="oc-plant">0</span>
+      </div>
+      <div class="ops-cards" id="ops-col-plant"></div>
+    </div>
+    <div class="ops-col">
+      <div class="ops-col-hdr">
+        <div class="ops-dot" style="background:#4e86b7"></div>
+        <span class="ops-col-lbl">Activate</span>
+        <span class="ops-col-cnt" id="oc-activate">0</span>
+      </div>
+      <div class="ops-cards" id="ops-col-activate"></div>
+    </div>
+    <div class="ops-col">
+      <div class="ops-col-hdr">
+        <div class="ops-dot" style="background:#a371c0"></div>
+        <span class="ops-col-lbl">Amplify</span>
+        <span class="ops-col-cnt" id="oc-amplify">0</span>
+      </div>
+      <div class="ops-cards" id="ops-col-amplify"></div>
+    </div>
+  </div>
+
+  <!-- ADD FORM -->
+  <div class="ops-add">
+    <button class="ops-add-toggle" onclick="toggleForm()">
+      <span id="form-icon">＋</span>
+      <span id="form-text">Tambah Aktivasi Baru</span>
+    </button>
+    <div class="ops-add-form" id="ops-form">
+      <div class="f-sec">Detail Aktivasi</div>
+      <div class="f-grid">
+        <div class="f-group">
+          <label class="f-lbl">Brand Klien</label>
+          <input class="f-input" id="f-brand" placeholder="Bromen, Zerodeo...">
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Nama Komunitas</label>
+          <select class="f-input" id="f-community"><option value="">— Pilih komunitas —</option></select>
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Kota</label>
+          <input class="f-input" id="f-city" placeholder="Surabaya, Malang...">
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Pilar</label>
+          <select class="f-select" id="f-pillar">
+            <option value="">— Pilih —</option>
+            <option>Sports</option>
+            <option>Lifestyle</option>
+            <option>Family</option>
+            <option>Gen-Z</option>
+          </select>
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Tanggal Aktivasi</label>
+          <input class="f-input" type="date" id="f-date">
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Total Budget (Rp)</label>
+          <input class="f-input" type="number" id="f-total-budget" placeholder="0">
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Hospitality Budget (Rp)</label>
+          <input class="f-input" type="number" id="f-budget" placeholder="0">
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">PIC Komunitas</label>
+          <input class="f-input" id="f-pic" placeholder="Nama · 08xx...">
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">
+            Status Awal
+            <span style="color:var(--amber);cursor:pointer;font-size:8px;margin-left:6px" onclick="toggleGuide()">— apa bedanya?</span>
+          </label>
+          <select class="f-select" id="f-status" onchange="highlightGuide(this.value)">
+            <option value="brief">Brief & Match</option>
+            <option value="plant">Plant</option>
+            <option value="activate">Activate</option>
+            <option value="amplify">Amplify</option>
+          </select>
+        </div>
+        <div class="f-group">
+          <label class="f-lbl">Videografer</label>
+          <input class="f-input" id="f-videog" placeholder="Nama videografer outsource">
+        </div>
+      </div>
+
+      <!-- PHASE GUIDE -->
+      <div id="phase-guide" style="display:none; background:rgba(232,176,75,0.05); border:1px solid rgba(232,176,75,0.15); border-radius:2px; padding:14px 16px; margin-bottom:14px;">
+        <div style="font-family:'DM Mono',monospace; font-size:8px; letter-spacing:2px; color:var(--amber); text-transform:uppercase; margin-bottom:10px;">Panduan Status</div>
+        <div id="pg-brief" style="padding:7px 0; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:flex-start;">
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--amber);margin-top:4px;flex-shrink:0"></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:var(--amber);text-transform:uppercase;margin-bottom:2px">Brief & Match</div><div style="font-size:11px;color:var(--gray-light);line-height:1.5">Aktivasi baru masuk, belum kontak PIC komunitas. Masih di atas kertas. <strong style="color:var(--amber)">Selalu mulai dari sini.</strong></div></div>
+        </div>
+        <div id="pg-plant" style="padding:7px 0; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:flex-start;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#61a363;margin-top:4px;flex-shrink:0"></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:#61a363;text-transform:uppercase;margin-bottom:2px">Plant</div><div style="font-size:11px;color:var(--gray-light);line-height:1.5">Sudah kontak PIC, jadwal dikonfirmasi, videografer di-brief. Aktivasi pasti jalan. Sudah di lapangan, belum eksekusi.</div></div>
+        </div>
+        <div id="pg-activate" style="padding:7px 0; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:flex-start;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#4e86b7;margin-top:4px;flex-shrink:0"></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:#4e86b7;text-transform:uppercase;margin-bottom:2px">Activate</div><div style="font-size:11px;color:var(--gray-light);line-height:1.5">Hari-H sudah lewat. Produk disebar, videografer sudah shoot, komunitas sudah ketemu brand. Sudah kejadian.</div></div>
+        </div>
+        <div id="pg-amplify" style="padding:7px 0; display:flex; gap:10px; align-items:flex-start;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#a371c0;margin-top:4px;flex-shrink:0"></div>
+          <div><div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;color:#a371c0;text-transform:uppercase;margin-bottom:2px">Amplify</div><div style="font-size:11px;color:var(--gray-light);line-height:1.5">Video diterima, diedit, siap posting. Report ke klien sedang atau sudah dibuat. Konten jadi, tinggal amplifikasi.</div></div>
+        </div>
+      </div>
+
+      <div class="f-actions">
+        <button class="f-btn-primary" onclick="addProject()">Tambahkan ke Board</button>
+        <button class="f-btn-ghost" onclick="toggleForm()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /ops-view -->
+
+</div><!-- /wrapper -->
+
+
+<!-- LOADING INDICATOR -->
+<div id="loading-indicator" style="display:none; position:fixed; top:52px; left:0; right:0; z-index:300; background:rgba(232,176,75,0.1); border-bottom:1px solid rgba(232,176,75,0.2); padding:8px; text-align:center;">
+  <span style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--amber); text-transform:uppercase;">Memuat data dari Sheets...</span>
+</div>
+<!-- PASSWORD MODAL -->
+<div class="pw-modal" id="pw-modal">
+  <div class="pw-modal-box">
+    <div class="pw-modal-icon">🔒</div>
+    <div class="pw-modal-title">Ops View</div>
+    <div class="pw-modal-sub">Internal access only</div>
+    <input class="pw-input" id="pw-input" type="password" placeholder="••••••••••••"
+      onkeydown="if(event.key==='Enter') submitPassword()">
+    <div class="pw-error" id="pw-error">Password salah. Coba lagi.</div>
+    <div class="pw-actions">
+      <button class="pw-submit" onclick="submitPassword()">Masuk</button>
+      <button class="pw-cancel" onclick="closePasswordModal()">Batal</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════
+// CONFIG — ganti URL ini setelah deploy Apps Script
+// ════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec';
+
+let projects = [];
+let opsUnlocked = false;
+const OPS_PASSWORD = 'empatkeledai';
+let isLoading = false;
+
+// ════════════════════════════════
+// SHEETS API
+// ════════════════════════════════
+function setConn(state) {
+  const dot   = document.getElementById('live-dot');
+  const label = document.getElementById('live-label');
+  if (!dot || !label) return;
+  if (state === 'live') {
+    dot.style.background = '#22c55e';
+    dot.style.animation  = 'pulse 2s infinite';
+    label.textContent    = 'Live';
+    label.style.color    = '#22c55e';
+  } else if (state === 'error') {
+    dot.style.background = '#ef4444';
+    dot.style.animation  = 'none';
+    label.textContent    = 'Offline';
+    label.style.color    = '#ef4444';
+  } else {
+    dot.style.background = '#E8B04B';
+    dot.style.animation  = 'pulse 2s infinite';
+    label.textContent    = 'Menghubungkan...';
+    label.style.color    = '';
+  }
+}
+
+async function loadFromSheets() {
+  setConn('loading');
+  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+    // Fallback ke localStorage kalau belum setup
+    projects = JSON.parse(localStorage.getItem('akar_projects') || '[]');
+    return;
+  }
+  try {
+    showLoadingState(true);
+    const res = await fetch(APPS_SCRIPT_URL + '?action=getProjects');
+    const json = await res.json();
+    if (json.success) {
+      projects = json.data || [];
+      setConn('live');
+    } else if (json.status === 'ok') {
+      projects = json.data || [];
+      setConn('live');
+    }
+  } catch(err) {
+    setConn('error');
+    console.warn('Sheets fetch gagal, pakai cache lokal:', err);
+    projects = JSON.parse(localStorage.getItem('akar_projects') || '[]');
+  } finally {
+    showLoadingState(false);
+  }
+}
+
+async function postToSheets(action, data) {
+  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+    save(); return true;
+  }
+  try {
+    const body = action === 'delete' ? { action, target:'projects', id: data } : { action, target:'projects', data };
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    return json.status === 'ok';
+  } catch(err) {
+    console.warn('Sheets POST gagal:', err);
+    return false;
+  }
+}
+
+function showLoadingState(show) {
+  isLoading = show;
+  const el = document.getElementById('loading-indicator');
+  if(el) el.style.display = show ? 'flex' : 'none';
+}
+
+// ════════════════════════════════
+// CLOCK
+// ════════════════════════════════
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+  const days=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const el = document.getElementById('ops-date');
+  if(el) el.textContent = days[n.getDay()] + ', ' + n.getDate() + ' ' + months[n.getMonth()] + ' ' + n.getFullYear();
+}
+setInterval(tick,1000); tick();
+
+// ════════════════════════════════
+// MODE SWITCH
+// ════════════════════════════════
+function setMode(mode) {
+  if (mode === 'ops') {
+    if (!opsUnlocked) {
+      showPasswordModal();
+      return;
+    }
+  }
+  if (mode === 'pitch') opsUnlocked = false;
+  applyMode(mode);
+}
+
+function applyMode(mode) {
+  document.body.className = mode + '-mode';
+  document.getElementById('btn-pitch').className = 'mode-btn' + (mode==='pitch' ? ' pitch-active' : '');
+  document.getElementById('btn-ops').className = 'mode-btn' + (mode==='ops' ? ' active' : '');
+  if (mode==='pitch') renderPitch();
+  if (mode==='ops') renderOps();
+}
+
+function showPasswordModal() {
+  document.getElementById('pw-modal').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+
+function closePasswordModal() {
+  document.getElementById('pw-modal').style.display = 'none';
+}
+
+function submitPassword() {
+  const pw = document.getElementById('pw-input').value;
+  if (pw === OPS_PASSWORD) {
+    opsUnlocked = true;
+    closePasswordModal();
+    applyMode('ops');
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+// ════════════════════════════════
+// TOAST
+// ════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+// ════════════════════════════════
+// SAVE
+// ════════════════════════════════
+function save() { localStorage.setItem('akar_projects', JSON.stringify(projects)); }
+
+function formatRp(n) {
+  if(!n||isNaN(n)) return 'Rp 0';
+  return 'Rp ' + parseInt(n).toLocaleString('id-ID');
+}
+
+// ════════════════════════════════
+// FORM
+// ════════════════════════════════
+function toggleForm() {
+  const f = document.getElementById('ops-form');
+  const open = f.classList.toggle('open');
+  document.getElementById('form-icon').textContent = open ? '×' : '＋';
+  document.getElementById('form-text').textContent = open ? 'Tutup Form' : 'Tambah Aktivasi Baru';
+}
+
+function toggleGuide() {
+  const g = document.getElementById('phase-guide');
+  g.style.display = g.style.display === 'none' ? 'block' : 'none';
+}
+
+function highlightGuide(val) {
+  const guide = document.getElementById('phase-guide');
+  if(guide.style.display==='none') guide.style.display='block';
+  ['brief','plant','activate','amplify'].forEach(p => {
+    const row = document.getElementById('pg-' + p);
+    if(row) row.style.opacity = (!val || p===val) ? '1' : '0.3';
+  });
+}
+
+function addProject() {
+  const brand = document.getElementById('f-brand').value.trim();
+  const communityEl = document.getElementById('f-community');
+  const community = communityEl ? (communityEl.selectedOptions?.[0]?.dataset?.nama || communityEl.value || '').trim() : '';
+  if(!brand||!community) { toast('Brand dan komunitas wajib diisi.'); return; }
+
+  const comSel = document.getElementById('f-community');
+  const comOpt = comSel ? comSel.selectedOptions[0] : null;
+  const komID  = comSel ? comSel.value : '';
+  const comName = (comOpt && comOpt.dataset.nama) ? comOpt.dataset.nama : community;
+  const autoCity = (comOpt && comOpt.dataset.kota) ? comOpt.dataset.kota : '';
+  const autoPillar = (comOpt && comOpt.dataset.pillar) ? comOpt.dataset.pillar : '';
+  const newProject = {
+    id: Date.now(),
+    Brand: brand,
+    Community_Name_Cache: comName || community,
+    KOM_ID: komID,
+    City: document.getElementById('f-city').value.trim() || autoCity,
+    Pillar: document.getElementById('f-pillar').value || autoPillar,
+    Date: document.getElementById('f-date').value,
+    Total_Budget: parseInt(document.getElementById('f-total-budget')?.value)||0,
+    Hospitality_Budget: parseInt(document.getElementById('f-budget').value)||0,
+    PIC: document.getElementById('f-pic').value.trim(),
+    Status: document.getElementById('f-status').value,
+    Videog: document.getElementById('f-videog').value.trim(),
+  };
+
+  projects.push(newProject);
+  save();
+  postToSheets('add', newProject);
+  renderAll(); toggleForm();
+  ['f-brand','f-city','f-date','f-budget','f-pic','f-videog','f-community'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-pillar').value='';
+  document.getElementById('f-status').value='brief';
+  toast('Aktivasi ditambahkan ✓');
+}
+
+const NEXT = { brief:'plant', plant:'activate', activate:'amplify', amplify:null };
+const NEXT_LABEL = { brief:'Plant', plant:'Activate', activate:'Amplify' };
+const DOT_COLOR = { brief:'var(--amber)', plant:'#61a363', activate:'#4e86b7', amplify:'#a371c0' };
+
+function moveProject(id, status) {
+  const p = projects.find(x=>x.id===id);
+  if(p){
+    p.status = status;
+    save();
+    postToSheets('update', { id: p.id, status });
+    renderAll();
+    toast('Status diperbarui ✓');
+  }
+}
+
+function deleteProject(id) {
+  if(!confirm('Hapus aktivasi ini?')) return;
+  projects = projects.filter(x=>x.id!==id);
+  save();
+  postToSheets('delete', id);
+  renderAll(); toast('Dihapus.');
+}
+
+// ════════════════════════════════
+// RENDER OPS
+// ════════════════════════════════
+function renderOps() {
+  const phases = ['brief','plant','activate','amplify'];
+  phases.forEach(phase => {
+    const items = projects.filter(p=>p.status===phase);
+    const el = document.getElementById('ops-col-'+phase);
+    const cnt = document.getElementById('oc-'+phase);
+    cnt.textContent = items.length;
+
+    if(!items.length) {
+      el.innerHTML = '<div class="empty-col">Kosong</div>';
+      return;
+    }
+
+    el.innerHTML = items.map(p => {
+      const next = NEXT[p.status];
+      return `
+        <div class="ops-card">
+          <div class="ocard-brand">${p.brand}</div>
+          <div class="ocard-community">${p.community}</div>
+          <div class="ocard-meta">
+            ${p.city||''} ${p.pillar ? '· '+p.pillar : ''}<br>
+            ${p.date ? '📅 '+p.date : ''}${p.budget ? ' · 💰 '+formatRp(p.budget) : ''}
+          </div>
+          <div class="ocard-actions">
+            ${next ? `<button class="ocard-btn ocard-btn-next" onclick="moveProject(${p.id},'${next}')">→ ${NEXT_LABEL[p.status]}</button>` : '<span style="font-family:DM Mono,monospace;font-size:7px;color:var(--gray);padding:3px 0">✓ Selesai</span>'}
+            <button class="ocard-btn ocard-btn-del" onclick="deleteProject(${p.id})">Hapus</button>
+          </div>
+        </div>`;
+    }).join('');
+  });
+
+  // Stats
+  document.getElementById('os-total').textContent = projects.length;
+  document.getElementById('os-brief').textContent = projects.filter(p=>p.status==='brief').length;
+  document.getElementById('os-active').textContent = projects.filter(p=>['plant','activate'].includes(p.status)).length;
+  document.getElementById('os-done').textContent = projects.filter(p=>p.status==='amplify').length;
+  document.getElementById('os-budget').textContent = formatRp(projects.reduce((s,p)=>s+(p.budget||0),0));
+}
+
+// ════════════════════════════════
+// RENDER PITCH
+// ════════════════════════════════
+function renderPitch() {
+  // Stats
+  document.getElementById('ps-activations').textContent = projects.filter(p=>['brief','plant','activate'].includes(p.status)).length;
+  const uniqueCommunities = [...new Set(projects.map(p=>p.community).filter(Boolean))].length;
+  document.getElementById('ps-communities').textContent = uniqueCommunities || 0;
+  const uniqueBrands = [...new Set(projects.map(p=>p.brand))].length;
+  document.getElementById('ps-brands').textContent = uniqueBrands || 0;
+  document.getElementById('ps-amplified').textContent = projects.filter(p=>p.status==='amplify').length;
+
+  // Pillar counts — dynamic
+  const pillarMap = { Sports:'pil-sports-count', Lifestyle:'pil-lifestyle-count', Family:'pil-family-count', 'Gen-Z':'pil-genz-count' };
+  Object.keys(pillarMap).forEach(pillar => {
+    const el = document.getElementById(pillarMap[pillar]);
+    const count = projects.filter(p => p.pillar === pillar).length;
+    if(el) el.textContent = count > 0 ? count + ' project' : '—';
+  });
+
+// Projects grid
+  const grid = document.getElementById('pitch-projects-grid');
+  const visible = projects.filter(p=>['plant','activate','amplify'].includes(p.status));
+
+  if(!visible.length) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1; padding:48px; text-align:center; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:18px; color:var(--gray);">
+        Aktivasi pertama sedang disiapkan.
+      </div>`;
+    return;
+  }
+
+  const phaseLabel = { brief:'Brief & Match', plant:'Plant', activate:'Activate', amplify:'Amplify' };
+  const phaseColor = { brief:'var(--amber)', plant:'#61a363', activate:'#4e86b7', amplify:'#a371c0' };
+
+  grid.innerHTML = visible.map(p => `
+    <div class="pitch-project-card" data-phase="${p.status}">
+      <div class="ppc-phase" style="color:${phaseColor[p.status]}">${phaseLabel[p.status]}</div>
+      <div class="ppc-brand">${p.brand}</div>
+      <div class="ppc-community">${p.community}</div>
+      <div class="ppc-tags">
+        ${p.city ? `<span class="ppc-tag">${p.city}</span>` : ''}
+        ${p.pillar ? `<span class="ppc-tag">${p.pillar}</span>` : ''}
+        ${p.date ? `<span class="ppc-tag">${p.date}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════
+function renderAll() { renderOps(); renderPitch(); }
+
+// Initial load
+loadFromSheets().then(() => renderAll());
+
+// ── COMMUNITY DROPDOWN LOADER ───────────────────────────
+let communityList = [];
+function loadCommunities() {
+  const cbName = 'cb_com_' + Date.now();
+  const script = document.createElement('script');
+  window[cbName] = function(json) {
+    delete window[cbName]; document.body.removeChild(script);
+    if (json.success && json.data && json.data.length) {
+      communityList = json.data;
+      const sel = document.getElementById('f-community');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Pilih komunitas —</option>';
+      communityList.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c['ID'] || '';
+        opt.textContent = (c['Nama Komunitas']||'') + (c['Kota'] ? ' · '+c['Kota'] : '');
+        opt.dataset.nama   = c['Nama Komunitas'] || '';
+        opt.dataset.kota   = c['Kota'] || '';
+        opt.dataset.pillar = c['Kategori'] || '';
+        sel.appendChild(opt);
+      });
+    }
+  };
+  script.onerror = function(){ delete window[cbName]; };
+  script.src = APPS_SCRIPT_URL + '?action=getCommunities&callback=' + cbName;
+  document.body.appendChild(script);
+}
+loadCommunities();
+
+document.addEventListener('change', function(e) {
+  if (e.target.id !== 'f-community') return;
+  const opt = e.target.selectedOptions[0];
+  if (!opt) return;
+  const cityEl   = document.getElementById('f-city');
+  const pillarEl = document.getElementById('f-pillar');
+  if (cityEl   && opt.dataset.kota   && !cityEl.value)   cityEl.value   = opt.dataset.kota;
+  if (pillarEl && opt.dataset.pillar && !pillarEl.value) pillarEl.value = opt.dataset.pillar;
+});
+// ── END COMMUNITY DROPDOWN ──────────────────────────────
+</script>
+</body>
+</html>
