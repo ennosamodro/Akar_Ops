@@ -1210,7 +1210,7 @@ body.ops-mode .ops-view { display: block; }
 // ════════════════════════════════
 // CONFIG — ganti URL ini setelah deploy Apps Script
 // ════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYahzUu5PBxMGB_ePMSmtegH9Q5CDQfVhyI6eniXUmM3r0jAu_VX7CnX8lsLIhjccJ/exec';
 
 let projects = [];
 let opsUnlocked = false;
@@ -1253,12 +1253,25 @@ async function loadFromSheets() {
     showLoadingState(true);
     const res = await fetch(APPS_SCRIPT_URL + '?action=getProjects');
     const json = await res.json();
-    if (json.success) {
-      projects = json.data || [];
+    if (json.success || json.status === 'ok') {
+      projects = (json.data || []).map(p => ({
+        id:         p.PRJ_ID || p.id || Date.now(),
+        brand:      p.Brand         || p.brand       || '',
+        community:  p.Community_Name_Cache || p.community || '',
+        kom_id:     p.KOM_ID        || p.kom_id      || '',
+        city:       p.City          || p.city        || '',
+        pillar:     p.Pillar        || p.pillar      || '',
+        date:       p.Date          || p.date        || '',
+        total_budget: parseInt(p.Total_Budget || p.total_budget || 0),
+        budget:     parseInt(p.Hospitality_Budget || p.budget || 0),
+        pic:        p.PIC           || p.pic         || '',
+        videog:     p.Videog        || p.videog      || '',
+        status:     (p.Status || p.status || 'brief').toString().trim().toLowerCase(),
+        created_at: p.Created_At    || p.created_at  || '',
+      }));
       setConn('live');
-    } else if (json.status === 'ok') {
-      projects = json.data || [];
-      setConn('live');
+    } else {
+      setConn('error');
     }
   } catch(err) {
     setConn('error');
@@ -1270,7 +1283,7 @@ async function loadFromSheets() {
 }
 
 async function postToSheets(action, data) {
-  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec') {
     save(); return true;
   }
   try {
