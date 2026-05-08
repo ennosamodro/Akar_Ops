@@ -1103,12 +1103,10 @@ body.ops-mode .ops-view { display: block; }
         <div class="f-group">
           <label class="f-lbl">Nama Komunitas</label>
           <div style="position:relative;" id="com-dropdown-wrap">
-  <input class="f-input" id="f-community-search" placeholder="Cari komunitas..." autocomplete="off"
-    style="cursor:text;"
-    onfocus="showComList()" oninput="filterComList(this.value)">
+  <input class="f-input" id="f-community-search" placeholder="Cari atau pilih komunitas..." autocomplete="off"
+    style="cursor:text;" onclick="showComList()" oninput="filterComList(this.value)">
   <input type="hidden" id="f-community" value="">
-  <div id="com-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1a2a1b;border:1px solid rgba(255,255,255,0.1);border-radius:8px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-  </div>
+  <div id="com-list" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0f1f10;border:1px solid rgba(232,176,75,0.25);border-radius:8px;max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,0.5);"></div>
 </div>
         </div>
         <div class="f-group">
@@ -1217,7 +1215,7 @@ body.ops-mode .ops-view { display: block; }
 // ════════════════════════════════
 // CONFIG — ganti URL ini setelah deploy Apps Script
 // ════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYahzUu5PBxMGB_ePMSmtegH9Q5CDQfVhyI6eniXUmM3r0jAu_VX7CnX8lsLIhjccJ/exec';
 
 let projects = [];
 let opsUnlocked = false;
@@ -1251,7 +1249,7 @@ function setConn(state) {
 
 async function loadFromSheets() {
   setConn('loading');
-  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec') {
     // Fallback ke localStorage kalau belum setup
     projects = JSON.parse(localStorage.getItem('akar_projects') || '[]');
     return;
@@ -1263,6 +1261,7 @@ async function loadFromSheets() {
     if (json.success || json.status === 'ok') {
       projects = (json.data || []).map(p => ({
         id:           p.PRJ_ID || p.id || Date.now(),
+        prj_id:       p.PRJ_ID || '',
         brand:        p.Brand  || p.brand  || '',
         community:    p.Community_Name_Cache || p.community || '',
         kom_id:       p.KOM_ID || p.kom_id || '',
@@ -1288,7 +1287,7 @@ async function loadFromSheets() {
 }
 
 async function postToSheets(action, data) {
-  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec') {
     save(); return true;
   }
   try {
@@ -1415,17 +1414,15 @@ function highlightGuide(val) {
 
 function addProject() {
   const brand = document.getElementById('f-brand').value.trim();
-  const communityEl = document.getElementById('f-community');
-  const communitySearch = document.getElementById('f-community-search');
-  const community = (communitySearch ? communitySearch.value : '') || (communityEl ? communityEl.value : '');
-  if(!brand||!community) { toast('Brand dan komunitas wajib diisi.'); return; }
+  const communitySearchEl = document.getElementById('f-community-search');
+  const communityHiddenEl = document.getElementById('f-community');
+  const community = (communitySearchEl ? communitySearchEl.value.split(' · ')[0].trim() : '');
+  if(!community) { toast('Komunitas wajib diisi.'); return; }
 
-  const comHidden = document.getElementById('f-community');
-  const comSearch = document.getElementById('f-community-search');
-  const komID   = comHidden ? comHidden.value : '';
-  const comName = comSearch ? comSearch.value.split(' · ')[0] : community;
-  const selCom  = communityList.find(c => c['ID'] === komID) || {};
-  const autoCity   = selCom['Kota'] || '';
+  const komID    = document.getElementById('f-community').value || '';
+  const selCom   = communityList.find(c => c['ID'] === komID) || {};
+  const comName  = community;
+  const autoCity = selCom['Kota'] || '';
   const autoPillar = selCom['Kategori'] || '';
   const newProject = {
     id: Date.now(),
@@ -1446,8 +1443,7 @@ function addProject() {
   save();
   postToSheets('add', newProject);
   renderAll(); toggleForm();
-  ['f-brand','f-city','f-date','f-total-budget','f-budget','f-pic','f-videog','f-community'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const cs=document.getElementById('f-community-search');if(cs)cs.value='';
+  ['f-brand','f-city','f-date','f-total-budget','f-budget','f-pic','f-videog','f-community','f-community-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-pillar').value='';
   document.getElementById('f-status').value='brief';
   toast('Aktivasi ditambahkan ✓');
@@ -1594,31 +1590,34 @@ function loadCommunities() {
 loadCommunities();
 
 function showComList() {
-  filterComList(document.getElementById('f-community-search').value);
+  filterComList(document.getElementById('f-community-search').value || '');
 }
 
 function filterComList(q) {
   const list = document.getElementById('com-list');
   if (!list) return;
+  const ql = (q||'').toLowerCase();
   const filtered = communityList.filter(c => {
     const nama = (c['Nama Komunitas']||'').toLowerCase();
     const kota = (c['Kota']||'').toLowerCase();
-    return !q || nama.includes(q.toLowerCase()) || kota.includes(q.toLowerCase());
+    return !ql || nama.includes(ql) || kota.includes(ql);
   });
   if (!filtered.length) {
-    list.innerHTML = '<div style="padding:12px 16px;color:#6b7280;font-size:13px;">Tidak ditemukan</div>';
+    list.innerHTML = '<div style="padding:14px 16px;color:#6b7280;font-size:13px;">Tidak ditemukan</div>';
   } else {
     list.innerHTML = filtered.map(c => {
       const nama = c['Nama Komunitas'] || '';
       const kota = c['Kota'] || '';
       const id   = c['ID'] || '';
-      return `<div class="com-opt" data-id="${id}" data-nama="${nama}" data-kota="${kota}" data-pillar="${c['Kategori']||''}"
-        style="padding:10px 16px;cursor:pointer;font-size:13px;color:#e8e8e0;border-bottom:1px solid rgba(255,255,255,0.05);"
-        onmouseover="this.style.background='rgba(232,176,75,0.15)'"
-        onmouseout="this.style.background=''"
-        onclick="selectCom(this)">
-        ${nama}<span style="color:#6b7280;font-size:11px;margin-left:6px;">${kota}</span>
-      </div>`;
+      const pillar = c['Kategori'] || '';
+      const safeNama = nama.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      return '<div data-id="' + id + '" data-nama="' + safeNama + '" data-kota="' + kota + '" data-pillar="' + pillar + '"' +
+        ' style="padding:10px 14px;cursor:pointer;font-size:13px;color:#e8e8e0;border-bottom:1px solid rgba(255,255,255,0.05);"' +
+        ' onmouseover="this.style.background=\'rgba(232,176,75,0.15)\'"' +
+        ' onmouseout="this.style.background=\'\'"' +
+        ' onclick="selectCom(this)">' +
+        nama + '<span style="color:#6b7280;font-size:11px;margin-left:8px;">' + kota + '</span>' +
+        '</div>';
     }).join('');
   }
   list.style.display = 'block';
@@ -1640,7 +1639,7 @@ document.addEventListener('click', function(e) {
     if (list) list.style.display = 'none';
   }
 });
-// ── END COMMUNITY DROPDOWN ──────────────────────────────
+// ── END COMMUNITY DROPDOWN ─────────────────────────────// ── END COMMUNITY DROPDOWN ──────────────────────────────
 </script>
 </body>
 </html>
