@@ -1215,7 +1215,7 @@ body.ops-mode .ops-view { display: block; }
 // ════════════════════════════════
 // CONFIG — ganti URL ini setelah deploy Apps Script
 // ════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYahzUu5PBxMGB_ePMSmtegH9Q5CDQfVhyI6eniXUmM3r0jAu_VX7CnX8lsLIhjccJ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzpdR3hEFblfSfdMltLK-nMvccne3YNGT4SWbfsLox4hW8ppFzz5u-g5ADQcF5X0JnU/exec';
 
 let projects = [];
 let opsUnlocked = false;
@@ -1249,7 +1249,7 @@ function setConn(state) {
 
 async function loadFromSheets() {
   setConn('loading');
-  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec') {
+  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
     // Fallback ke localStorage kalau belum setup
     projects = JSON.parse(localStorage.getItem('akar_projects') || '[]');
     return;
@@ -1287,7 +1287,7 @@ async function loadFromSheets() {
 }
 
 async function postToSheets(action, data) {
-  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwgv9UzM_jmcMBFlX3sn9KyVdcxbnsM90PYDhO4SUv0xU18_5x7scmVlhvp5fyRIO3Y/exec') {
+  if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
     save(); return true;
   }
   try {
