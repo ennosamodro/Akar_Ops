@@ -1489,8 +1489,10 @@ function deleteProject(prjId) {
 let editingProject = null;
 
 function openProjectDetail(prjId) {
+  console.log('openProjectDetail called with:', prjId);
   const p = projects.find(x => String(x.prj_id||x.id) === String(prjId));
-  if (!p) return;
+  console.log('Found project:', p);
+  if (!p) { console.log('Project NOT FOUND'); return; }
   editingProject = { ...p };
   const modal = document.getElementById('projDetailModal');
   if (!modal) return;
@@ -1655,7 +1657,9 @@ function renderOps() {
 document.addEventListener('click', function(e) {
   const card = e.target.closest('.ops-card[data-prjid]');
   if (card && !e.target.closest('.ocard-actions')) {
-    openProjectDetail(card.dataset.prjid);
+    const pid = card.dataset.prjid;
+    console.log('Card clicked, prjid:', pid, 'projects:', projects.map(p=>p.prj_id));
+    openProjectDetail(pid);
   }
 });
 
