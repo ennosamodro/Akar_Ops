@@ -1042,12 +1042,12 @@ body.ops-mode .ops-view { display: block; }
     <div class="ops-stat">
       <div class="ostat-lbl">Selesai</div>
       <div class="ostat-val" id="os-done" style="color:#a371c0">0</div>
-      <div class="ostat-unit">amplify done</div>
+      <div class="ostat-unit">amplify selesai</div>
     </div>
     <div class="ops-stat">
       <div class="ostat-lbl">Total Budget</div>
       <div class="ostat-val" id="os-budget" style="font-size:18px; padding-top:6px">Rp 0</div>
-      <div class="ostat-unit">hospitality alokasi</div>
+      <div class="ostat-unit">total semua project</div>
     </div>
   </div>
 
@@ -1625,9 +1625,9 @@ function renderOps() {
 
     el.innerHTML = items.map(p => {
       const next = NEXT[p.status];
-      const safePid = String(p.prj_id || p.id).replace(/'/g, '');
+      const safePid = String(p.prj_id || p.id);
       return `
-        <div class="ops-card" style="cursor:pointer;" onclick="openProjectDetail('${safePid}')">
+        <div class="ops-card" style="cursor:pointer;" data-prjid="${safePid}">
           <div class="ocard-brand">${p.brand || '<span style=\'opacity:0.4;font-style:italic\'>(belum ada brand)</span>'}</div>
           <div class="ocard-community">${p.community || '—'}</div>
           <div class="ocard-meta">
@@ -1649,6 +1649,15 @@ function renderOps() {
   document.getElementById('os-done').textContent = projects.filter(p=>p.status==='amplify').length;
   document.getElementById('os-budget').textContent = formatRp(projects.reduce((s,p)=>s+(p.total_budget||0),0));
 }
+
+
+// Click delegation for project cards
+document.addEventListener('click', function(e) {
+  const card = e.target.closest('.ops-card[data-prjid]');
+  if (card && !e.target.closest('.ocard-actions')) {
+    openProjectDetail(card.dataset.prjid);
+  }
+});
 
 // ════════════════════════════════
 // RENDER PITCH
@@ -1705,7 +1714,10 @@ function renderPitch() {
 function renderAll() { renderOps(); renderPitch(); }
 
 // Initial load
-loadFromSheets().then(() => renderAll());
+loadFromSheets().then(() => { 
+  localStorage.removeItem('akar_projects'); // prevent double count from old cache
+  renderAll(); 
+});
 
 // ── COMMUNITY DROPDOWN LOADER ───────────────────────────
 let communityList = [];
@@ -1777,5 +1789,26 @@ document.addEventListener('click', function(e) {
 });
 // ── END COMMUNITY DROPDOWN ─────────────────────────────// ── END COMMUNITY DROPDOWN ──────────────────────────────
 </script>
+
+<!-- PROJECT DETAIL & EDIT MODAL -->
+<style>
+.pdm-label { display:block; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:#97BC62; text-transform:uppercase; font-weight:600; margin-bottom:6px; }
+.pdm-input { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:7px; padding:9px 11px; font-family:'DM Sans',sans-serif; font-size:13px; color:#F5F1E8; box-sizing:border-box; }
+.pdm-input:focus { outline:none; border-color:#E8B04B; background:rgba(232,176,75,0.04); }
+</style>
+<div id="projDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;overflow-y:auto;padding:20px;">
+  <div style="background:#0f1f10;max-width:760px;width:100%;margin:20px auto;border-radius:14px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);border:1px solid rgba(232,176,75,0.15);">
+    <div style="background:#1A3A1B;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(232,176,75,0.2);">
+      <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#F5F1E8;letter-spacing:2px;text-transform:uppercase;">Detail & Edit Project</div>
+      <button onclick="closeProjectDetail()" style="background:none;border:none;color:#97BC62;font-size:22px;cursor:pointer;line-height:1;padding:0;">✕</button>
+    </div>
+    <div id="pdmBody" style="padding:28px;"></div>
+    <div style="padding:0 28px 28px;display:flex;gap:10px;">
+      <button id="pdmSaveBtn" onclick="saveProjectEdit()" style="background:#E8B04B;color:#1A3A1B;border:none;border-radius:8px;padding:11px 24px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;flex:1;letter-spacing:0.5px;">Simpan Perubahan</button>
+      <button onclick="closeProjectDetail()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:#97BC62;border-radius:8px;padding:11px 20px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Batal</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
