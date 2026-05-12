@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akar · Community Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --forest: #1B4332;
+  --forest-mid: #2D6A4F;
+  --forest-pale: #E8F3ED;
+  --amber: #D97706;
+  --amber-pale: #FEF3C7;
+  --cream: #FDFAF4;
+  --root: #1C1917;
+  --stone: #78716C;
+  --stone-light: #F5F4F1;
+  --stone-border: #E7E5E4;
+  --verified-bg: #ECFDF5;
+  --verified-text: #065F46;
+  --white: #FFFFFF;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--root); display:flex; min-height:100vh; }
+
+.sidebar {
+  width:220px; min-width:220px; background:var(--root);
+  display:flex; flex-direction:column;
+  position:fixed; inset:0 auto 0 0; z-index:50;
+}
+.sidebar-top { padding:24px 20px 20px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.akar-logo { display:flex; align-items:center; gap:10px; }
+.akar-logo-text { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:#FEF3C7; letter-spacing:1px; }
+.akar-sub { font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--stone); margin-top:3px; }
+.mode-wrap { padding:12px 14px; }
+.mode-toggle { display:flex; background:rgba(255,255,255,0.05); border-radius:8px; padding:3px; border:1px solid rgba(255,255,255,0.07); }
+.mode-btn { flex:1; padding:6px 4px; border:none; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:10px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer; color:var(--stone); background:none; transition:all 0.2s; }
+.mode-btn.active { background:var(--amber); color:var(--root); }
+.nav-wrap { flex:1; padding:8px 10px; }
+.nav-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#57534E; padding:12px 10px 6px; font-weight:600; }
+.nav-btn { display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; border:none; background:none; color:#A8A29E; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.15s; margin-bottom:1px; }
+.nav-btn:hover { background:rgba(255,255,255,0.05); color:#E7E5E4; }
+.nav-btn.active { background:var(--forest); color:#FEF3C7; font-weight:600; }
+.nav-btn .ico { font-size:15px; width:20px; text-align:center; }
+.sidebar-foot { padding:14px 18px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#57534E; }
+.sidebar-foot strong { color:#A8A29E; display:block; margin-bottom:2px; }
+
+.main { margin-left:220px; flex:1; min-height:100vh; display:flex; flex-direction:column; }
+.topbar { background:var(--cream); border-bottom:1px solid var(--stone-border); padding:0 32px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:40; }
+.topbar-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--forest); letter-spacing:0.3px; }
+.topbar-meta { font-size:12px; color:var(--stone); display:flex; align-items:center; gap:6px; }
+.dot-live { width:7px; height:7px; border-radius:50%; background:var(--verified-text); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.content { padding:28px 32px 48px; }
+
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.stat-card { background:var(--white); border:1px solid var(--stone-border); border-radius:12px; padding:18px 20px; }
+.stat-label { font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--stone); margin-bottom:8px; }
+.stat-value { font-family:'Syne',sans-serif; font-size:30px; font-weight:800; color:var(--root); line-height:1; }
+.stat-value.amber { color:var(--amber); }
+.stat-value.forest { color:var(--forest); }
+.stat-sub { font-size:11px; color:var(--stone); margin-top:4px; }
+
+.pillar-section { background:var(--white); border:1px solid var(--stone-border); border-radius:12px; padding:20px 24px; margin-bottom:20px; }
+.section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.section-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--root); letter-spacing:0.3px; }
+.section-sub { font-size:11px; color:var(--stone); }
+.pillar-bars { display:flex; flex-direction:column; gap:10px; }
+.pillar-row { display:flex; align-items:center; gap:12px; }
+.pillar-name { font-size:12px; font-weight:600; width:70px; min-width:70px; color:var(--root); }
+.pillar-track { flex:1; height:8px; background:var(--stone-light); border-radius:99px; overflow:hidden; }
+.pillar-fill { height:100%; border-radius:99px; transition:width 0.6s ease; }
+.pillar-count { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--root); min-width:30px; text-align:right; }
+.pillar-member { font-size:11px; color:var(--stone); min-width:80px; text-align:right; }
+
+.filter-row { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+.filter-select, .filter-input { background:var(--white); border:1px solid var(--stone-border); border-radius:8px; padding:8px 12px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--root); outline:none; transition:border-color 0.15s; }
+.filter-select:focus, .filter-input:focus { border-color:var(--forest); }
+.filter-input { flex:1; min-width:200px; }
+.filter-input::placeholder { color:#C0BAB3; }
+
+.table-wrap { background:var(--white); border:1px solid var(--stone-border); border-radius:12px; overflow:hidden; }
+table { width:100%; border-collapse:collapse; }
+thead { background:var(--stone-light); border-bottom:1px solid var(--stone-border); }
+th { padding:11px 16px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--stone); text-align:left; white-space:nowrap; }
+td { padding:13px 16px; font-size:13px; border-bottom:1px solid var(--stone-border); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#FAFAF8; }
+.community-name { font-weight:600; font-size:14px; color:var(--root); }
+.community-sub { font-size:11px; color:var(--stone); margin-top:1px; }
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; white-space:nowrap; }
+.badge-verified { background:var(--verified-bg); color:var(--verified-text); }
+.badge-registered { background:var(--stone-light); color:var(--stone); }
+.badge-sports { background:var(--forest-pale); color:var(--forest); }
+.badge-lifestyle { background:#EFF6FF; color:#1D4ED8; }
+.badge-family { background:#FFF7ED; color:#C2410C; }
+.badge-genz { background:#F5F3FF; color:#6D28D9; }
+.badge-other { background:var(--stone-light); color:var(--stone); }
+.ses-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; }
+.ses-high { background:var(--amber-pale); color:#92400E; }
+.ses-mid { background:var(--stone-light); color:var(--stone); }
+.ses-low { background:#FEE2E2; color:#991B1B; }
+.member-num { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; }
+.empty-state { padding:48px; text-align:center; color:var(--stone); font-size:13px; }
+.empty-icon { font-size:32px; margin-bottom:10px; }
+
+.form-wrap { max-width:720px; }
+.form-card { background:var(--white); border:1px solid var(--stone-border); border-radius:12px; padding:28px 32px; margin-bottom:16px; }
+.form-card-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--forest); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--stone-border); }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--stone); text-transform:uppercase; }
+.form-label .req { color:var(--amber); }
+.form-input, .form-select, .form-textarea { background:var(--cream); border:1px solid var(--stone-border); border-radius:8px; padding:9px 12px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--root); outline:none; transition:border-color 0.15s, background 0.15s; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--forest); background:var(--white); }
+.form-textarea { resize:vertical; min-height:72px; }
+.submit-btn { background:var(--forest); color:#FEF3C7; border:none; border-radius:8px; padding:11px 28px; font-family:'Syne',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.5px; cursor:pointer; transition:background 0.15s, transform 0.1s; }
+.submit-btn:hover { background:var(--forest-mid); }
+.submit-btn:active { transform:scale(0.98); }
+.submit-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+.toast { position:fixed; bottom:24px; right:24px; background:var(--root); color:#FEF3C7; padding:12px 20px; border-radius:9px; font-size:13px; font-weight:500; box-shadow:0 8px 24px rgba(0,0,0,0.2); opacity:0; transform:translateY(10px); transition:all 0.25s; z-index:999; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { border-left:3px solid #059669; }
+.toast.error { border-left:3px solid #DC2626; }
+
+.mobile-bar { display:none; position:fixed; bottom:0; left:0; right:0; background:var(--root); padding:8px 0 12px; z-index:100; border-top:1px solid rgba(255,255,255,0.06); }
+.mobile-nav { display:flex; justify-content:space-around; }
+.mobile-btn { display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; cursor:pointer; padding:4px 16px; color:var(--stone); font-family:'DM Sans',sans-serif; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; transition:color 0.15s; }
+.mobile-btn .ico { font-size:18px; }
+.mobile-btn.active { color:var(--amber); }
+
+@media (max-width:768px) {
+  .sidebar { display:none; }
+  .main { margin-left:0; }
+  .mobile-bar { display:block; }
+  .content { padding:20px 16px 80px; }
+  .stats-row { grid-template-columns:1fr 1fr; }
+  .topbar { padding:0 16px; }
+  .form-grid { grid-template-columns:1fr; }
+  .table-wrap { overflow-x:auto; }
+  table { min-width:560px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell" id="appShell" style="display:flex; flex:1;">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="akar-logo">
+        <svg width="34" height="34" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#D97706" stroke-width="3" opacity="0.4"/>
+          <circle cx="50" cy="50" r="26" fill="#D97706"/>
+          <g stroke="#FEF3C7" stroke-width="3.5" stroke-linecap="round" fill="none">
+            <line x1="50" y1="50" x2="50" y2="18"/>
+            <line x1="50" y1="50" x2="74" y2="34"/>
+            <line x1="50" y1="50" x2="76" y2="60"/>
+            <line x1="50" y1="50" x2="58" y2="80"/>
+            <line x1="50" y1="50" x2="28" y2="76"/>
+            <line x1="50" y1="50" x2="22" y2="46"/>
+          </g>
+          <g fill="#FEF3C7">
+            <circle cx="50" cy="18" r="4"/><circle cx="74" cy="34" r="4"/>
+            <circle cx="76" cy="60" r="4"/><circle cx="58" cy="80" r="4"/>
+            <circle cx="28" cy="76" r="4"/><circle cx="22" cy="46" r="4"/>
+          </g>
+        </svg>
+        <div>
+          <div class="akar-logo-text">AKAR</div>
+          <div class="akar-sub">Community Dashboard</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mode-wrap">
+      <div class="mode-toggle">
+        <button class="mode-btn" id="modeOps" onclick="setMode('ops')">Ops</button>
+        <button class="mode-btn active" id="modePitch" onclick="setMode('pitch')">Pitch</button>
+      </div>
+    </div>
+
+    <div class="nav-wrap">
+      <div class="nav-label">Menu</div>
+      <button class="nav-btn active" id="navMap" onclick="setTab('map')">
+        <span class="ico">🗺</span> Peta Komunitas
+      </button>
+      <button class="nav-btn" id="navAdd" onclick="setTab('add')" style="display:none;">
+        <span class="ico">＋</span> Tambah Komunitas
+      </button>
+    </div>
+
+    <div class="sidebar-foot">
+      <strong id="modeLabel">Mode: Pitch</strong>
+      <span id="footCount">—</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">Peta Komunitas</div>
+      <div class="topbar-meta">
+        <div class="dot-live"></div>
+        <span id="topbarMeta">Memuat...</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="tabMap">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Komunitas</div>
+            <div class="stat-value forest" id="statTotal">—</div>
+            <div class="stat-sub">terdaftar</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Terverifikasi</div>
+            <div class="stat-value forest" id="statVerified">—</div>
+            <div class="stat-sub">dari total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Audience</div>
+            <div class="stat-value amber" id="statAudience">—</div>
+            <div class="stat-sub">member aktif</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Kota</div>
+            <div class="stat-value" id="statCities">—</div>
+            <div class="stat-sub">kota di Jatim</div>
+          </div>
+        </div>
+
+        <div class="pillar-section">
+          <div class="section-head">
+            <div class="section-title">Sebaran per Pilar</div>
+            <div class="section-sub" id="pillarSub">semua kota</div>
+          </div>
+          <div class="pillar-bars" id="pillarBars"></div>
+        </div>
+
+        <div class="filter-row">
+          <select class="filter-select" id="filterKota" onchange="applyFilters()">
+            <option value="">Semua Kota</option>
+          </select>
+          <select class="filter-select" id="filterKategori" onchange="applyFilters()">
+            <option value="">Semua Pilar</option>
+            <option value="Sports">Sports</option>
+            <option value="Lifestyle">Lifestyle</option>
+            <option value="Family">Family</option>
+            <option value="Gen-Z">Gen-Z</option>
+            <option value="Other">Other</option>
+          </select>
+          <select class="filter-select" id="filterSub" onchange="applyFilters()">
+            <option value="">Semua Sub</option>
+          </select>
+          <input class="filter-input" id="filterSearch" placeholder="Cari nama atau niche..." oninput="applyFilters()" />
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Komunitas</th>
+                <th>Pilar</th>
+                <th>Kota</th>
+                <th>Member</th>
+                <th>SES</th>
+                <th id="thContact">Kontak</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⏳</div>Memuat data...</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tabAdd" style="display:none;">
+        <div class="form-wrap">
+          <div class="form-card">
+            <div class="form-card-title">Identitas Komunitas</div>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label class="form-label">Nama Komunitas <span class="req">*</span></label>
+                <input class="form-input" id="fNama" placeholder="contoh: IndoRunners Surabaya" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kategori <span class="req">*</span></label>
+                <select class="form-select" id="fKategori">
+                  <option value="">Pilih kategori</option>
+                  <option>Sports</option><option>Lifestyle</option>
+                  <option>Family</option><option>Gen-Z</option><option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Subkategori <span class="req">*</span></label>
+                <input class="form-input" id="fSub" placeholder="contoh: Lari, Vespa, Arisan..." />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kota <span class="req">*</span></label>
+                <input class="form-input" id="fKota" placeholder="contoh: Surabaya" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Lokasi Kumpul</label>
+                <input class="form-input" id="fLokasi" placeholder="contoh: Lapangan Thor" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Frekuensi</label>
+                <select class="form-select" id="fFrekuensi">
+                  <option value="">Pilih</option>
+                  <option>Mingguan</option><option>2x Sebulan</option>
+                  <option>Bulanan</option><option>Sewaktu-waktu</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Hari & Jam Rutin</label>
+                <input class="form-input" id="fJam" placeholder="contoh: Minggu, 06.00 WIB" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-title">Data Audiens</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Jumlah Member Aktif <span class="req">*</span></label>
+                <input class="form-input" id="fMember" type="number" placeholder="150" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Estimasi SES</label>
+                <select class="form-select" id="fSES">
+                  <option value="">Pilih</option>
+                  <option>High</option><option>Middle-High</option>
+                  <option>Middle</option><option>Low-Middle</option><option>Low</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Rentang Usia</label>
+                <input class="form-input" id="fUsia" placeholder="25–40 tahun" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Gender Dominan</label>
+                <select class="form-select" id="fGender">
+                  <option value="">Pilih</option>
+                  <option>Pria</option><option>Wanita</option><option>Campuran</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Profil Pekerjaan</label>
+                <input class="form-input" id="fProfesi" placeholder="Karyawan / Mahasiswa / Pengusaha" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-title">Kontak & Internal <span style="font-size:10px;color:var(--amber);font-weight:400;text-transform:none;letter-spacing:0;">(tersembunyi di Pitch Mode)</span></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Nama Ketua / PIC</label>
+                <input class="form-input" id="fKetua" placeholder="Nama lengkap" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">No. WhatsApp</label>
+                <input class="form-input" id="fWA" placeholder="08xx-xxxx-xxxx" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Instagram</label>
+                <input class="form-input" id="fIG" placeholder="@handle" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Followers IG</label>
+                <input class="form-input" id="fFollowers" type="number" placeholder="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pernah Kerjasama Brand?</label>
+                <select class="form-select" id="fBrand">
+                  <option value="Belum">Belum</option>
+                  <option value="Pernah">Pernah</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Brand Sebelumnya</label>
+                <input class="form-input" id="fBrandName" placeholder="Nama brand (jika pernah)" />
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Catatan Internal</label>
+                <textarea class="form-textarea" id="fCatatan" placeholder="Catatan untuk tim"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Diinput Oleh</label>
+                <input class="form-input" id="fOleh" placeholder="Nama kamu" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="fStatus">
+                  <option value="Registered">Registered</option>
+                  <option value="Verified">Verified</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button class="submit-btn" id="submitBtn" onclick="submitForm()">Simpan ke Database</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="mobile-bar">
+    <div class="mobile-nav">
+      <button class="mobile-btn active" id="mNavMap" onclick="setTab('map')"><span class="ico">🗺</span> Peta</button>
+      <button class="mobile-btn" id="mNavAdd" onclick="setTab('add')" style="display:none;"><span class="ico">＋</span> Tambah</button>
+      <button class="mobile-btn" id="mNavPitch" onclick="setMode('pitch')"><span class="ico">👁</span> Pitch</button>
+      <button class="mobile-btn" id="mNavOps" onclick="setMode('ops')"><span class="ico">🔧</span> Ops</button>
+    </div>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── HARDCODED CONFIG ──
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzpdR3hEFblfSfdMltLK-nMvccne3YNGT4SWbfsLox4hW8ppFzz5u-g5ADQcF5X0JnU/exec';
+const OPS_PASSWORD = 'empatkeledai';
+
+const PILLAR_COLORS = { Sports:'#1B4332', Lifestyle:'#2563EB', Family:'#D97706', 'Gen-Z':'#7C3AED', Other:'#78716C' };
+let currentMode = 'pitch';
+let currentTab = 'map';
+let allData = [];
+let filteredData = [];
+
+window.onload = () => loadData();
+
+function loadData() {
+  return new Promise((resolve) => {
+    const cbName = 'cb_' + Date.now();
+    const script = document.createElement('script');
+    window[cbName] = function(json) {
+      delete window[cbName];
+      document.body.removeChild(script);
+      if (json.success) {
+        allData = json.data;
+        document.getElementById('topbarMeta').textContent = 'Terhubung ke Sheets';
+      } else {
+        showToast('Gagal load data', 'error');
+      }
+      renderAll(); resolve();
+    };
+    script.onerror = function() {
+      delete window[cbName];
+      showToast('Koneksi gagal', 'error');
+      renderAll(); resolve();
+    };
+    script.src = SCRIPT_URL + '?action=get&callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+
+function renderAll() {
+  updateKotaDropdown();
+  updateSubDropdown();
+  applyFilters();
+}
+
+function applyFilters() {
+  const kota = document.getElementById('filterKota').value;
+  const kat  = document.getElementById('filterKategori').value;
+  const sub  = document.getElementById('filterSub').value;
+  const q    = document.getElementById('filterSearch').value.toLowerCase();
+  filteredData = allData.filter(d =>
+    (!kota || d['Kota']===kota) &&
+    (!kat  || d['Kategori']===kat) &&
+    (!sub  || d['Subkategori']===sub) &&
+    (!q    || (d['Nama Komunitas']||'').toLowerCase().includes(q) || (d['Subkategori']||'').toLowerCase().includes(q))
+  );
+  renderStats(); renderPillars(); renderTable();
+}
+
+function updateKotaDropdown() {
+  const sel = document.getElementById('filterKota');
+  const cur = sel.value;
+  const cities = [...new Set(allData.map(d=>d['Kota']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Semua Kota</option>';
+  cities.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; if(c===cur)o.selected=true; sel.appendChild(o); });
+}
+
+function updateSubDropdown() {
+  const sel = document.getElementById('filterSub');
+  const cur = sel.value;
+  const subs = [...new Set(allData.map(d=>d['Subkategori']).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Semua Sub</option>';
+  subs.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; if(s===cur)o.selected=true; sel.appendChild(o); });
+}
+
+function renderStats() {
+  const total    = filteredData.length;
+  const verified = filteredData.filter(d=>d['Status Verifikasi']==='Verified').length;
+  const audience = filteredData.reduce((a,d)=>a+(parseInt(d['Jumlah Member Aktif'])||0),0);
+  const cities   = [...new Set(filteredData.map(d=>d['Kota']).filter(Boolean))].length;
+  document.getElementById('statTotal').textContent    = total;
+  document.getElementById('statVerified').textContent = verified;
+  document.getElementById('statAudience').textContent = audience.toLocaleString('id-ID');
+  document.getElementById('statCities').textContent   = cities;
+  document.getElementById('footCount').textContent    = total + ' komunitas';
+}
+
+function renderPillars() {
+  const pillars = {};
+  filteredData.forEach(d => {
+    const k = d['Kategori']||'Other';
+    if(!pillars[k]) pillars[k]={count:0,members:0};
+    pillars[k].count++;
+    pillars[k].members += parseInt(d['Jumlah Member Aktif'])||0;
+  });
+  const maxC = Math.max(...Object.values(pillars).map(p=>p.count),1);
+  document.getElementById('pillarBars').innerHTML = Object.entries(pillars).map(([n,p])=>`
+    <div class="pillar-row">
+      <div class="pillar-name">${n}</div>
+      <div class="pillar-track"><div class="pillar-fill" style="width:${(p.count/maxC)*100}%;background:${PILLAR_COLORS[n]||'#78716C'};"></div></div>
+      <div class="pillar-count">${p.count}</div>
+      <div class="pillar-member">${p.members.toLocaleString('id-ID')} member</div>
+    </div>`).join('') || '<div style="color:#78716C;font-size:13px;">Tidak ada data</div>';
+  const kf = document.getElementById('filterKota').value;
+  document.getElementById('pillarSub').textContent = kf || 'semua kota';
+}
+
+function renderTable() {
+  const isPitch = currentMode==='pitch';
+  document.getElementById('thContact').style.display = isPitch ? 'none' : '';
+  if(!filteredData.length) {
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔍</div>Tidak ada yang cocok.</div></td></tr>';
+    return;
+  }
+  const katClass = {Sports:'badge-sports',Lifestyle:'badge-lifestyle',Family:'badge-family','Gen-Z':'badge-genz'};
+  const sesClass = s => s==='High'||s==='Middle-High'?'ses-high':s==='Low'||s==='Low-Middle'?'ses-low':'ses-mid';
+  document.getElementById('tableBody').innerHTML = filteredData.map(d => {
+    const isV = d['Status Verifikasi']==='Verified';
+    const kat = d['Kategori']||'Other';
+    const contactTd = isPitch ? '' : '<td>' +
+      (d['Nama Ketua']?'<div style="font-size:12px;font-weight:600;">'+d['Nama Ketua']+'</div>':'') +
+      (d['No WhatsApp']?'<div style="font-size:11px;color:#78716C;">'+d['No WhatsApp']+'</div>':'') +
+      (d['Instagram']?'<div style="font-size:11px;color:#2563EB;">'+d['Instagram']+'</div>':'') +
+      (d['Frekuensi Kumpul']?'<div style="font-size:10px;color:#A8A29E;margin-top:2px;">⏱ '+d['Frekuensi Kumpul']+'</div>':'') +
+      '</td>';
+    return `<tr>
+      <td><span class="badge ${isV?'badge-verified':'badge-registered'}">${isV?'✓ Verified':'Registered'}</span></td>
+      <td><div class="community-name">${d['Nama Komunitas']||'—'}</div><div class="community-sub">${d['Subkategori']||''} · ${d['Kota']||''}</div></td>
+      <td><span class="badge ${katClass[kat]||'badge-other'}">${kat}</span></td>
+      <td style="font-size:13px;">${d['Kota']||'—'}</td>
+      <td><span class="member-num">${(parseInt(d['Jumlah Member Aktif'])||0).toLocaleString('id-ID')}</span></td>
+      <td>${d['Estimasi SES']?'<span class="ses-badge '+sesClass(d['Estimasi SES'])+'">'+d['Estimasi SES']+'</span>':'—'}</td>
+      ${contactTd}
+      ${isPitch ? '' : '<td><button class="edit-row-btn" data-id="'+d['ID']+'" style="background:none;border:1px solid rgba(44,95,45,0.3);border-radius:6px;padding:4px 10px;font-size:11px;color:#2C5F2D;cursor:pointer;font-weight:600;white-space:nowrap;">✏ Edit</button></td>'}
+    </tr>`;
+  }).join('');
+}
+
+async function submitForm() {
+  const nama=document.getElementById('fNama').value.trim();
+  const kat=document.getElementById('fKategori').value;
+  const sub=document.getElementById('fSub').value.trim();
+  const kota=document.getElementById('fKota').value.trim();
+  const member=document.getElementById('fMember').value;
+  if(!nama||!kat||!sub||!kota||!member){showToast('Lengkapi field wajib dulu','error');return;}
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true; btn.textContent='Menyimpan...';
+  const data={
+    'Nama Komunitas':nama,'Kategori':kat,'Subkategori':sub,'Kota':kota,
+    'Lokasi Kumpul':document.getElementById('fLokasi').value,
+    'Frekuensi Kumpul':document.getElementById('fFrekuensi').value,
+    'Hari & Jam Rutin':document.getElementById('fJam').value,
+    'Jumlah Member Aktif':member,
+    'Estimasi SES':document.getElementById('fSES').value,
+    'Rentang Usia':document.getElementById('fUsia').value,
+    'Gender Dominan':document.getElementById('fGender').value,
+    'Profil Pekerjaan':document.getElementById('fProfesi').value,
+    'Nama Ketua':document.getElementById('fKetua').value,
+    'No WhatsApp':document.getElementById('fWA').value,
+    'Instagram':document.getElementById('fIG').value,
+    'Followers IG':document.getElementById('fFollowers').value,
+    'Pernah Kerjasama Brand':document.getElementById('fBrand').value,
+    'Brand Sebelumnya':document.getElementById('fBrandName').value,
+    'Catatan Internal':document.getElementById('fCatatan').value,
+    'Diinput Oleh':document.getElementById('fOleh').value,
+    'Status Verifikasi':document.getElementById('fStatus').value,
+  };
+  await new Promise((resolve) => {
+    const cbName='cb_add_'+Date.now();
+    const script=document.createElement('script');
+    window[cbName]=function(json){
+      delete window[cbName]; document.body.removeChild(script);
+      if(json.success){showToast('Komunitas berhasil disimpan ✓','success');clearForm();loadData().then(()=>setTab('map'));}
+      else{showToast('Gagal: '+(json.error||'error'),'error');}
+      resolve();
+    };
+    script.onerror=function(){delete window[cbName];showToast('Koneksi gagal','error');resolve();};
+    script.src=SCRIPT_URL+'?action=add&callback='+cbName+'&data='+encodeURIComponent(JSON.stringify(data));
+    document.body.appendChild(script);
+  });
+  btn.disabled=false; btn.textContent='Simpan ke Database';
+}
+
+function clearForm() {
+  ['fNama','fSub','fKota','fLokasi','fJam','fUsia','fProfesi','fKetua','fWA','fIG','fFollowers','fBrandName','fCatatan','fOleh']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fKategori','fFrekuensi','fSES','fGender','fBrand','fStatus']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+}
+
+function setMode(mode) {
+  if(mode==='ops'){
+    const pw=prompt('Password Ops Mode:');
+    if(pw!==OPS_PASSWORD){showToast('Password salah','error');return;}
+  }
+  currentMode=mode;
+  document.getElementById('modeOps').classList.toggle('active',mode==='ops');
+  document.getElementById('modePitch').classList.toggle('active',mode==='pitch');
+  document.getElementById('modeLabel').textContent='Mode: '+(mode==='ops'?'Ops':'Pitch');
+  const showAdd=mode==='ops';
+  document.getElementById('navAdd').style.display=showAdd?'':'none';
+  document.getElementById('mNavAdd').style.display=showAdd?'':'none';
+  if(mode==='pitch'&&currentTab==='add')setTab('map');
+  document.getElementById('mNavPitch').classList.toggle('active',mode==='pitch');
+  document.getElementById('mNavOps').classList.toggle('active',mode==='ops');
+  renderTable();
+}
+
+function setTab(tab) {
+  currentTab=tab;
+  document.getElementById('tabMap').style.display=tab==='map'?'':'none';
+  document.getElementById('tabAdd').style.display=tab==='add'?'':'none';
+  document.getElementById('navMap').classList.toggle('active',tab==='map');
+  document.getElementById('navAdd').classList.toggle('active',tab==='add');
+  document.getElementById('mNavMap').classList.toggle('active',tab==='map');
+  document.getElementById('topbarTitle').textContent=tab==='map'?'Peta Komunitas':'Tambah Komunitas';
+}
+
+function showToast(msg,type='success') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  setTimeout(()=>t.className='toast',3200);
+}
+
+// ══════════════════════════════════════════════════════
+// EDIT SYSTEM
+// ══════════════════════════════════════════════════════
+let editingData = null;
+
+// Click delegation — handle edit buttons in table
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.edit-row-btn');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const row = allData.find(d => String(d['ID']) === String(id));
+  if (row) openEdit(row);
+});
+
+const EDIT_FIELDS = [
+  {key:'Nama Komunitas', label:'Nama Komunitas', type:'text', full:true},
+  {key:'Kategori', label:'Kategori', type:'select', opts:['Sports','Lifestyle','Family','Gen-Z']},
+  {key:'Subkategori', label:'Subkategori', type:'text'},
+  {key:'Kota', label:'Kota', type:'text'},
+  {key:'Lokasi Kumpul', label:'Lokasi Kumpul', type:'text', full:true},
+  {key:'Frekuensi Kumpul', label:'Frekuensi', type:'select', opts:['Mingguan','2x Sebulan','Bulanan','Sewaktu-waktu']},
+  {key:'Hari & Jam Rutin', label:'Hari & Jam Rutin', type:'text'},
+  {key:'Jumlah Member Aktif', label:'Jumlah Member Aktif', type:'number'},
+  {key:'Rentang Usia', label:'Rentang Usia', type:'text'},
+  {key:'Gender Dominan', label:'Gender Dominan', type:'select', opts:['Pria','Wanita','Campuran']},
+  {key:'Profil Pekerjaan', label:'Profil Pekerjaan', type:'text'},
+  {key:'Estimasi SES', label:'Estimasi SES', type:'select', opts:['High','Middle-High','Middle','Low-Middle','Low']},
+  {key:'Nama Ketua', label:'Nama Ketua / PIC', type:'text'},
+  {key:'No WhatsApp', label:'No. WhatsApp', type:'text'},
+  {key:'Instagram', label:'Instagram', type:'text'},
+  {key:'Followers IG', label:'Followers IG', type:'number'},
+  {key:'Pernah Kerjasama Brand', label:'Pernah Kerjasama Brand?', type:'select', opts:['Belum','Pernah']},
+  {key:'Brand Sebelumnya', label:'Brand Sebelumnya', type:'text'},
+  {key:'Catatan Internal', label:'Catatan Internal', type:'textarea', full:true},
+  {key:'Status Verifikasi', label:'Status Verifikasi', type:'select', opts:['Registered','Verified']},
+];
+
+function openEdit(d) {
+  editingData = { ...d };
+  const body = document.getElementById('editFormBody');
+  body.innerHTML = EDIT_FIELDS.map(f => {
+    const val = String(editingData[f.key] || '');
+    const style = f.full ? 'grid-column:1/-1;' : '';
+    let input = '';
+    const eid = 'ef_' + f.key.replace(/[^a-zA-Z0-9]/g,'_');
+    if (f.type === 'select') {
+      const opts = f.opts.map(o => `<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');
+      input = `<select id="${eid}" style="background:#f9f9f7;border:1px solid #e5e7eb;border-radius:7px;padding:8px 10px;font-size:13px;width:100%;">${opts}</select>`;
+    } else if (f.type === 'textarea') {
+      input = `<textarea id="${eid}" rows="3" style="background:#f9f9f7;border:1px solid #e5e7eb;border-radius:7px;padding:8px 10px;font-size:13px;width:100%;resize:vertical;box-sizing:border-box;">${val}</textarea>`;
+    } else {
+      input = `<input id="${eid}" type="${f.type}" value="${val.replace(/"/g,'&quot;')}" style="background:#f9f9f7;border:1px solid #e5e7eb;border-radius:7px;padding:8px 10px;font-size:13px;width:100%;box-sizing:border-box;">`;
+    }
+    return `<div style="${style}display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">${f.label}</label>
+      ${input}
+    </div>`;
+  }).join('');
+  document.getElementById('editModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEdit() {
+  document.getElementById('editModal').style.display = 'none';
+  document.body.style.overflow = '';
+  editingData = null;
+}
+
+async function saveEdit() {
+  if (!editingData) return;
+  const btn = document.getElementById('editSaveBtn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  EDIT_FIELDS.forEach(f => {
+    const el = document.getElementById('ef_' + f.key.replace(/[^a-zA-Z0-9]/g,'_'));
+    if (el) editingData[f.key] = el.value;
+  });
+  await new Promise((resolve) => {
+    const cbName = 'cb_upd_' + Date.now();
+    const script = document.createElement('script');
+    window[cbName] = function(json) {
+      delete window[cbName]; document.body.removeChild(script);
+      if (json.success) {
+        showToast('Berhasil diupdate ✓', 'success');
+        closeEdit();
+        loadData();
+      } else {
+        showToast('Gagal: ' + (json.error || 'unknown'), 'error');
+      }
+      resolve();
+    };
+    script.onerror = function() { delete window[cbName]; showToast('Koneksi gagal', 'error'); resolve(); };
+    script.src = SCRIPT_URL + '?action=update&callback=' + cbName + '&data=' + encodeURIComponent(JSON.stringify(editingData));
+    document.body.appendChild(script);
+  });
+  btn.disabled = false; btn.textContent = 'Simpan Perubahan';
+}
+// ══════════════════════════════════════════════════════
+
+</script>
+
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;overflow-y:auto;padding:20px;">
+  <div style="background:#fff;max-width:700px;margin:20px auto;border-radius:14px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.35);">
+    <div style="background:#1A3A1B;padding:20px 28px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:13px;font-weight:700;color:#F5F1E8;letter-spacing:1px;text-transform:uppercase;">Edit Komunitas</div>
+      <button onclick="closeEdit()" style="background:none;border:none;color:#97BC62;font-size:22px;cursor:pointer;line-height:1;padding:0;">✕</button>
+    </div>
+    <div id="editFormBody" style="padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;"></div>
+    <div style="padding:0 28px 28px;display:flex;gap:10px;">
+      <button id="editSaveBtn" onclick="saveEdit()" style="background:#2C5F2D;color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;flex:1;letter-spacing:0.3px;">Simpan Perubahan</button>
+      <button onclick="closeEdit()" style="background:none;border:1px solid #e5e7eb;color:#6b7280;border-radius:8px;padding:11px 20px;font-size:13px;cursor:pointer;">Batal</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
