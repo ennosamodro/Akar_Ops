@@ -580,23 +580,33 @@ async function saveBrand() {
   const isEdit = editingBrand && editingBrand['BRD_ID'];
   if (isEdit) payload['BRD_ID'] = editingBrand['BRD_ID'];
 
-  try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: isEdit ? 'update' : 'add', target: 'brands', data: payload })
-    });
-    const json = await res.json();
-    if (json.success) {
-      showToast(isEdit ? 'Brand diupdate ✓' : 'Brand ditambahkan ✓');
-      closeModal();
-      setTimeout(loadData, 800);
-    } else {
-      showToast('Gagal: ' + (json.error||'unknown'), 'error');
-    }
-  } catch(e) {
-    showToast('Koneksi gagal', 'error');
-  }
+  const action = isEdit ? 'updateBrand' : 'addBrand';
+
+  await new Promise((resolve) => {
+    const cbName = 'cb_save_' + Date.now();
+    window[cbName] = function(json) {
+      const s = document.getElementById(cbName);
+      if (s) document.body.removeChild(s);
+      delete window[cbName];
+      if (json.success) {
+        showToast(isEdit ? 'Brand diupdate ✓' : 'Brand ditambahkan ✓');
+        closeModal();
+        setTimeout(loadData, 1000);
+      } else {
+        showToast('Gagal: ' + (json.error||'unknown'), 'error');
+      }
+      resolve();
+    };
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.onerror = function() { 
+      delete window[cbName]; 
+      showToast('Koneksi gagal', 'error'); 
+      resolve(); 
+    };
+    script.src = SCRIPT_URL + '?action=' + action + '&callback=' + cbName + '&data=' + encodeURIComponent(JSON.stringify(payload));
+    document.body.appendChild(script);
+  });
 
   btn.disabled = false;
   btn.textContent = isEdit ? 'Simpan Perubahan' : 'Tambahkan Brand';
