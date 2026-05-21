@@ -199,7 +199,31 @@ tr:hover td { background:#FAFAF8; }
     </div>
   </aside>
 
-  <div class="main">
+  
+<!-- AKAR NAV -->
+<div style="background:#0a150b;border-bottom:1px solid rgba(232,176,75,0.1);padding:0 28px;height:36px;display:flex;align-items:center;gap:4px;position:sticky;top:56px;z-index:99;">
+  <a href="./index.html" id="nav-tracker" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;text-decoration:none;color:#6B7C6D;transition:all 0.2s;">Project Tracker</a>
+  <a href="./dashboard.html" id="nav-community" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;text-decoration:none;color:#6B7C6D;transition:all 0.2s;">Community DB</a>
+  <a href="./brands.html" id="nav-brands" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;text-decoration:none;color:#6B7C6D;transition:all 0.2s;">Brand DB</a>
+</div>
+<script>
+(function(){
+  const path = window.location.pathname;
+  const map = {
+    'index': 'nav-tracker',
+    'dashboard': 'nav-community', 
+    'brands': 'nav-brands'
+  };
+  Object.keys(map).forEach(key => {
+    if (path.includes(key) || (key === 'index' && (path.endsWith('/') || path.endsWith('index.html')))) {
+      const el = document.getElementById(map[key]);
+      if (el) { el.style.background='rgba(232,176,75,0.1)'; el.style.color='#E8B04B'; el.style.border='1px solid rgba(232,176,75,0.2)'; }
+    }
+  });
+})();
+</script>
+
+<div class="main">
     <div class="topbar">
       <div class="topbar-title" id="topbarTitle">Peta Komunitas</div>
       <div class="topbar-meta">
