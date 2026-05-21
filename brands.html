@@ -139,7 +139,7 @@ body.pitch-mode .brand-table td.ops-only { display:none !important; }
 .toast.error { border-color:rgba(224,82,82,0.3); color:var(--red); }
 </style>
 </head>
-<body>
+<body class="pitch-mode">
 
 <div class="topbar">
   <div class="topbar-left">
@@ -202,7 +202,7 @@ body.pitch-mode .brand-table td.ops-only { display:none !important; }
 
 <div class="main">
   <div class="page-title">
-    <h1 id="page-mode-label">OPS · Brand Database</h1>
+    <h1 id="page-mode-label">PITCH · Brand Database</h1>
     <p>Pipeline brand & history aktivasi</p>
   </div>
 
@@ -299,7 +299,7 @@ const OPS_PASSWORD = 'empatkeledai';
 
 let allBrands = [];
 let activeStage = 'all';
-let currentMode = 'ops';
+let currentMode = 'pitch';
 let editingBrand = null;
 
 // ── CONN INDICATOR ────────────────────────────────────────
