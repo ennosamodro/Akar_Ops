@@ -914,6 +914,26 @@ body.ops-mode .ops-view { display: block; }
   </div>
 </div>
 
+
+<!-- AKAR NAV -->
+<div style="background:#0a150b;border-bottom:1px solid rgba(232,176,75,0.1);padding:0 28px;height:36px;display:flex;align-items:center;gap:4px;position:sticky;top:56px;z-index:99;">
+  <a href="./index.html" id="nav-tracker" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;text-decoration:none;color:#6B7C6D;transition:all 0.2s;">Project Tracker</a>
+  <a href="./dashboard.html" id="nav-community" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;text-decoration:none;color:#6B7C6D;transition:all 0.2s;">Community DB</a>
+  <a href="./brands.html" id="nav-brands" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:6px;text-decoration:none;color:#6B7C6D;transition:all 0.2s;">Brand DB</a>
+</div>
+<script>
+(function(){
+  const path = window.location.pathname;
+  const map = { 'index': 'nav-tracker', 'dashboard': 'nav-community', 'brands': 'nav-brands' };
+  Object.keys(map).forEach(key => {
+    if (path.includes(key) || (key === 'index' && (path.endsWith('/') || path.endsWith('index.html')))) {
+      const el = document.getElementById(map[key]);
+      if (el) { el.style.background='rgba(232,176,75,0.1)'; el.style.color='#E8B04B'; el.style.border='1px solid rgba(232,176,75,0.2)'; }
+    }
+  });
+})();
+</script>
+
 <div class="wrapper">
 
 <!-- ══════════════════════════════════
@@ -1098,7 +1118,12 @@ body.ops-mode .ops-view { display: block; }
       <div class="f-grid">
         <div class="f-group">
           <label class="f-lbl">Brand Klien</label>
-          <input class="f-input" id="f-brand" placeholder="Bromen, Zerodeo...">
+          <div style="position:relative;" id="brand-dropdown-wrap">
+  <input class="f-input" id="f-brand-search" placeholder="Cari atau ketik brand..." autocomplete="off"
+    onclick="showBrandList()" oninput="filterBrandList(this.value)">
+  <input type="hidden" id="f-brand" value="">
+  <div id="brand-list" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#0f1f10;border:1px solid rgba(232,176,75,0.25);border-radius:8px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,0.5);"></div>
+</div>
         </div>
         <div class="f-group">
           <label class="f-lbl">Nama Komunitas</label>
@@ -1250,8 +1275,7 @@ function setConn(state) {
 async function loadFromSheets() {
   setConn('loading');
   if (APPS_SCRIPT_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
-    // Fallback ke localStorage kalau belum setup
-    projects = JSON.parse(localStorage.getItem('akar_projects') || '[]');
+    projects = [];
     return;
   }
   try {
@@ -1381,7 +1405,7 @@ function toast(msg) {
 // ════════════════════════════════
 // SAVE
 // ════════════════════════════════
-function save() { localStorage.setItem('akar_projects', JSON.stringify(projects)); }
+function save() { /* disabled - using Sheets only */ }
 
 
 function formatDateID(dateStr) {
@@ -1422,7 +1446,9 @@ function highlightGuide(val) {
 }
 
 function addProject() {
-  const brand = document.getElementById('f-brand').value.trim();
+  const brandHidden = document.getElementById('f-brand');
+  const brandSearch = document.getElementById('f-brand-search');
+  const brand = (brandHidden?.value || brandSearch?.value || '').trim();
   const communitySearchEl = document.getElementById('f-community-search');
   const communityHiddenEl = document.getElementById('f-community');
   const community = (communitySearchEl ? communitySearchEl.value.split(' · ')[0].trim() : '');
@@ -1453,7 +1479,7 @@ function addProject() {
   save();
   postToSheets('add', newProject);
   renderAll(); toggleForm();
-  ['f-brand','f-city','f-date','f-total-budget','f-budget','f-pic','f-videog','f-community','f-community-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['f-brand','f-brand-search','f-city','f-date','f-total-budget','f-budget','f-pic','f-videog','f-community','f-community-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-pillar').value='';
   document.getElementById('f-status').value='brief';
   toast('Aktivasi ditambahkan ✓');
@@ -1560,6 +1586,10 @@ function openProjectDetail(prjId) {
       </div>
       <div style="grid-column:1/-1;background:rgba(232,176,75,0.05);border:1px solid rgba(232,176,75,0.15);border-radius:8px;padding:12px 14px;font-size:11px;color:#97BC62;font-style:italic;">
         Total Budget = anggaran keseluruhan project. Hospitality = bagian dari total yang dialokasikan untuk komunitas (drinks, snacks, dll).
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:10px;margin-top:10px;">
+        <button id="pdmSaveBtn" onclick="saveProjectEdit()" style="background:#E8B04B;color:#1A3A1B;border:none;border-radius:8px;padding:11px 24px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;flex:1;letter-spacing:0.5px;">Simpan Perubahan</button>
+        <button onclick="closeProjectDetail()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:#97BC62;border-radius:8px;padding:11px 20px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Batal</button>
       </div>
     </div>
   `;
@@ -1719,7 +1749,7 @@ function renderAll() { renderOps(); renderPitch(); }
 
 // Initial load
 loadFromSheets().then(() => { 
-  localStorage.removeItem('akar_projects'); // prevent double count from old cache
+  localStorage.removeItem('akar_projects'); // clear old cache
   renderAll(); 
 });
 
@@ -1791,7 +1821,161 @@ document.addEventListener('click', function(e) {
     if (list) list.style.display = 'none';
   }
 });
-// ── END COMMUNITY DROPDOWN ─────────────────────────────// ── END COMMUNITY DROPDOWN ──────────────────────────────
+// ── END COMMUNITY DROPDOWN ─────────────────────────────
+
+// ── BRAND DROPDOWN LOADER ────────────────────────────────
+let brandList = [];
+
+function loadBrands() {
+  const cbName = 'cb_brd_' + Date.now();
+  const script = document.createElement('script');
+  window[cbName] = function(json) {
+    delete window[cbName]; document.body.removeChild(script);
+    if (json.success && json.data && json.data.length) {
+      brandList = json.data.filter(b => b['Status Pipeline'] !== 'Inactive');
+    }
+  };
+  script.onerror = function(){ delete window[cbName]; };
+  script.src = APPS_SCRIPT_URL + '?action=getBrands&callback=' + cbName;
+  document.body.appendChild(script);
+}
+loadBrands();
+
+function showBrandList() {
+  filterBrandList(document.getElementById('f-brand-search').value || '');
+}
+
+function filterBrandList(q) {
+  const list = document.getElementById('brand-list');
+  if (!list) return;
+  const ql = (q||'').toLowerCase();
+  
+  // Always show typed value as first option if not in list
+  let items = brandList.filter(b => !ql || (b['Nama Brand']||'').toLowerCase().includes(ql));
+  
+  let html = '';
+  if (ql && !items.find(b => (b['Nama Brand']||'').toLowerCase() === ql)) {
+    html += `<div style="padding:10px 14px;cursor:pointer;font-size:13px;color:#E8B04B;border-bottom:1px solid rgba(255,255,255,0.05);"
+      onmouseover="this.style.background='rgba(232,176,75,0.15)'" onmouseout="this.style.background=''"
+      onclick="selectBrand('${q.replace(/'/g,"\'")}','')">
+      + Tambah "${q}" sebagai brand baru
+    </div>`;
+  }
+  
+  if (!items.length && !ql) {
+    html += '<div style="padding:14px 16px;color:#6b7280;font-size:13px;">Belum ada brand terdaftar</div>';
+  } else {
+    html += items.map(b => {
+      const nama = b['Nama Brand'] || '';
+      const stage = b['Status Pipeline'] || '';
+      return `<div data-nama="${nama}" style="padding:10px 14px;cursor:pointer;font-size:13px;color:#e8e8e0;border-bottom:1px solid rgba(255,255,255,0.05);"
+        onmouseover="this.style.background='rgba(232,176,75,0.15)'" onmouseout="this.style.background=''"
+        onclick="selectBrand('${nama.replace(/'/g,"\'")}','${b['BRD_ID']||''}')">
+        ${nama}<span style="color:#6b7280;font-size:10px;margin-left:8px;">${stage}</span>
+      </div>`;
+    }).join('');
+  }
+  
+  list.innerHTML = html;
+  list.style.display = 'block';
+}
+
+function selectBrand(nama, brdId) {
+  document.getElementById('f-brand').value = nama;
+  document.getElementById('f-brand-search').value = nama;
+  document.getElementById('brand-list').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#brand-dropdown-wrap')) {
+    const list = document.getElementById('brand-list');
+    if (list) list.style.display = 'none';
+    // If typed but not selected, use typed value
+    const search = document.getElementById('f-brand-search');
+    const hidden = document.getElementById('f-brand');
+    if (search && hidden && search.value && !hidden.value) {
+      hidden.value = search.value;
+    }
+  }
+});
+// ── END BRAND DROPDOWN ───────────────────────────────────// ── END COMMUNITY DROPDOWN ─────────────────────────────
+
+// ── BRAND DROPDOWN LOADER ────────────────────────────────
+let brandList = [];
+
+function loadBrands() {
+  const cbName = 'cb_brd_' + Date.now();
+  const script = document.createElement('script');
+  window[cbName] = function(json) {
+    delete window[cbName]; document.body.removeChild(script);
+    if (json.success && json.data && json.data.length) {
+      brandList = json.data.filter(b => b['Status Pipeline'] !== 'Inactive');
+    }
+  };
+  script.onerror = function(){ delete window[cbName]; };
+  script.src = APPS_SCRIPT_URL + '?action=getBrands&callback=' + cbName;
+  document.body.appendChild(script);
+}
+loadBrands();
+
+function showBrandList() {
+  filterBrandList(document.getElementById('f-brand-search').value || '');
+}
+
+function filterBrandList(q) {
+  const list = document.getElementById('brand-list');
+  if (!list) return;
+  const ql = (q||'').toLowerCase();
+  
+  // Always show typed value as first option if not in list
+  let items = brandList.filter(b => !ql || (b['Nama Brand']||'').toLowerCase().includes(ql));
+  
+  let html = '';
+  if (ql && !items.find(b => (b['Nama Brand']||'').toLowerCase() === ql)) {
+    html += `<div style="padding:10px 14px;cursor:pointer;font-size:13px;color:#E8B04B;border-bottom:1px solid rgba(255,255,255,0.05);"
+      onmouseover="this.style.background='rgba(232,176,75,0.15)'" onmouseout="this.style.background=''"
+      onclick="selectBrand('${q.replace(/'/g,"\'")}','')">
+      + Tambah "${q}" sebagai brand baru
+    </div>`;
+  }
+  
+  if (!items.length && !ql) {
+    html += '<div style="padding:14px 16px;color:#6b7280;font-size:13px;">Belum ada brand terdaftar</div>';
+  } else {
+    html += items.map(b => {
+      const nama = b['Nama Brand'] || '';
+      const stage = b['Status Pipeline'] || '';
+      return `<div data-nama="${nama}" style="padding:10px 14px;cursor:pointer;font-size:13px;color:#e8e8e0;border-bottom:1px solid rgba(255,255,255,0.05);"
+        onmouseover="this.style.background='rgba(232,176,75,0.15)'" onmouseout="this.style.background=''"
+        onclick="selectBrand('${nama.replace(/'/g,"\'")}','${b['BRD_ID']||''}')">
+        ${nama}<span style="color:#6b7280;font-size:10px;margin-left:8px;">${stage}</span>
+      </div>`;
+    }).join('');
+  }
+  
+  list.innerHTML = html;
+  list.style.display = 'block';
+}
+
+function selectBrand(nama, brdId) {
+  document.getElementById('f-brand').value = nama;
+  document.getElementById('f-brand-search').value = nama;
+  document.getElementById('brand-list').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#brand-dropdown-wrap')) {
+    const list = document.getElementById('brand-list');
+    if (list) list.style.display = 'none';
+    // If typed but not selected, use typed value
+    const search = document.getElementById('f-brand-search');
+    const hidden = document.getElementById('f-brand');
+    if (search && hidden && search.value && !hidden.value) {
+      hidden.value = search.value;
+    }
+  }
+});
+// ── END BRAND DROPDOWN ────────────────────────────────────
 </script>
 
 <!-- PROJECT DETAIL & EDIT MODAL -->
@@ -1800,17 +1984,14 @@ document.addEventListener('click', function(e) {
 .pdm-input { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:7px; padding:9px 11px; font-family:'DM Sans',sans-serif; font-size:13px; color:#F5F1E8; box-sizing:border-box; }
 .pdm-input:focus { outline:none; border-color:#E8B04B; background:rgba(232,176,75,0.04); }
 </style>
-<div id="projDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;overflow-y:auto;padding:20px;">
+<div id="projDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;overflow-y:auto;padding:20px 20px 60px;">
   <div style="background:#0f1f10;max-width:760px;width:100%;margin:20px auto;border-radius:14px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);border:1px solid rgba(232,176,75,0.15);">
     <div style="background:#1A3A1B;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(232,176,75,0.2);">
       <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#F5F1E8;letter-spacing:2px;text-transform:uppercase;">Detail & Edit Project</div>
       <button onclick="closeProjectDetail()" style="background:none;border:none;color:#97BC62;font-size:22px;cursor:pointer;line-height:1;padding:0;">✕</button>
     </div>
     <div id="pdmBody" style="padding:28px;"></div>
-    <div style="padding:0 28px 28px;display:flex;gap:10px;">
-      <button id="pdmSaveBtn" onclick="saveProjectEdit()" style="background:#E8B04B;color:#1A3A1B;border:none;border-radius:8px;padding:11px 24px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;flex:1;letter-spacing:0.5px;">Simpan Perubahan</button>
-      <button onclick="closeProjectDetail()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:#97BC62;border-radius:8px;padding:11px 20px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Batal</button>
-    </div>
+
   </div>
 </div>
 
