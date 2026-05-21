@@ -1747,7 +1747,8 @@ function renderPitch() {
 // ════════════════════════════════
 function renderAll() { renderOps(); renderPitch(); }
 
-// Initial load
+// Initial load — default pitch mode
+applyMode('pitch');
 loadFromSheets().then(() => { 
   localStorage.removeItem('akar_projects'); // clear old cache
   renderAll(); 
@@ -1899,83 +1900,6 @@ document.addEventListener('click', function(e) {
   }
 });
 // ── END BRAND DROPDOWN ───────────────────────────────────// ── END COMMUNITY DROPDOWN ─────────────────────────────
-
-// ── BRAND DROPDOWN LOADER ────────────────────────────────
-let brandList = [];
-
-function loadBrands() {
-  const cbName = 'cb_brd_' + Date.now();
-  const script = document.createElement('script');
-  window[cbName] = function(json) {
-    delete window[cbName]; document.body.removeChild(script);
-    if (json.success && json.data && json.data.length) {
-      brandList = json.data.filter(b => b['Status Pipeline'] !== 'Inactive');
-    }
-  };
-  script.onerror = function(){ delete window[cbName]; };
-  script.src = APPS_SCRIPT_URL + '?action=getBrands&callback=' + cbName;
-  document.body.appendChild(script);
-}
-loadBrands();
-
-function showBrandList() {
-  filterBrandList(document.getElementById('f-brand-search').value || '');
-}
-
-function filterBrandList(q) {
-  const list = document.getElementById('brand-list');
-  if (!list) return;
-  const ql = (q||'').toLowerCase();
-  
-  // Always show typed value as first option if not in list
-  let items = brandList.filter(b => !ql || (b['Nama Brand']||'').toLowerCase().includes(ql));
-  
-  let html = '';
-  if (ql && !items.find(b => (b['Nama Brand']||'').toLowerCase() === ql)) {
-    html += `<div style="padding:10px 14px;cursor:pointer;font-size:13px;color:#E8B04B;border-bottom:1px solid rgba(255,255,255,0.05);"
-      onmouseover="this.style.background='rgba(232,176,75,0.15)'" onmouseout="this.style.background=''"
-      onclick="selectBrand('${q.replace(/'/g,"\'")}','')">
-      + Tambah "${q}" sebagai brand baru
-    </div>`;
-  }
-  
-  if (!items.length && !ql) {
-    html += '<div style="padding:14px 16px;color:#6b7280;font-size:13px;">Belum ada brand terdaftar</div>';
-  } else {
-    html += items.map(b => {
-      const nama = b['Nama Brand'] || '';
-      const stage = b['Status Pipeline'] || '';
-      return `<div data-nama="${nama}" style="padding:10px 14px;cursor:pointer;font-size:13px;color:#e8e8e0;border-bottom:1px solid rgba(255,255,255,0.05);"
-        onmouseover="this.style.background='rgba(232,176,75,0.15)'" onmouseout="this.style.background=''"
-        onclick="selectBrand('${nama.replace(/'/g,"\'")}','${b['BRD_ID']||''}')">
-        ${nama}<span style="color:#6b7280;font-size:10px;margin-left:8px;">${stage}</span>
-      </div>`;
-    }).join('');
-  }
-  
-  list.innerHTML = html;
-  list.style.display = 'block';
-}
-
-function selectBrand(nama, brdId) {
-  document.getElementById('f-brand').value = nama;
-  document.getElementById('f-brand-search').value = nama;
-  document.getElementById('brand-list').style.display = 'none';
-}
-
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#brand-dropdown-wrap')) {
-    const list = document.getElementById('brand-list');
-    if (list) list.style.display = 'none';
-    // If typed but not selected, use typed value
-    const search = document.getElementById('f-brand-search');
-    const hidden = document.getElementById('f-brand');
-    if (search && hidden && search.value && !hidden.value) {
-      hidden.value = search.value;
-    }
-  }
-});
-// ── END BRAND DROPDOWN ────────────────────────────────────
 </script>
 
 <!-- PROJECT DETAIL & EDIT MODAL -->
